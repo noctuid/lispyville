@@ -64,10 +64,10 @@ deleted."
 ;;; Helpers
 (defun lispyville--in-string-p ()
   "Return whether the point is in a string.
-Unlike `lisp--in-string-p', |\"\" is not considered to be inside the string."
-  (save-excursion
-    (left-char)
-    (lispy--in-string-p)))
+Unlike `lispy--in-string-p', |\"\" is not considered to be inside the string."
+  (let ((str (lispy--bounds-string)))
+    (and str
+         (not (= (car str) (point))))))
 
 (defun lispyville--at-left-p ()
   "Return whether the point is before an opening delimiter."
