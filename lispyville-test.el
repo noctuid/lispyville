@@ -1,3 +1,6 @@
+(require 'lispyville)
+(lispyville-set-key-theme (list 'operators 's-operators))
+
 (defmacro lispyville-with (in &rest body)
   "This is `lispy-with' modified for lispyville."
   (declare (indent 1))
