@@ -4,7 +4,7 @@
 ;; URL: https://github.com/noctuid/lispyville
 ;; Created: March 03, 2016
 ;; Keywords: vim, evil, lispy, lisp, parentheses
-;; Package-Requires: ((lispy "0") (evil "0"))
+;; Package-Requires: ((lispy "0") (evil "0") (cl-lib "0.5"))
 ;; Version: 0.1
 
 ;; This file is not part of GNU Emacs.
@@ -28,6 +28,7 @@
 ;;; Code:
 (require 'evil)
 (require 'lispy)
+(require 'cl-lib)
 
 (defgroup lispyville nil
   "Provides a minor mode to integrate evil with lispy."
@@ -426,7 +427,15 @@ This is not like the default `evil-yank-line'."
   (lispyville-change beg end type register))
 
 ;;; Keybindings
-;; TODO add keybindings for normal and visual simultaneously
+(defmacro lispyville--define-key (states &rest maps)
+  "Helper function for defining keys in multiple STATES at once.
+MAPS are the keys and commands to define in lispyville-mode-map."
+  (declare (indent 1))
+  (let ((state (cl-gensym)))
+    `(if (listp ,states)
+         (dolist (,state ,states)
+           (evil-define-key ,state lispyville-mode-map ,@maps))
+       (evil-define-key ,states lispyville-mode-map ,@maps))))
 
 ;;;###autoload
 (defun lispyville-set-key-theme (&optional theme)
@@ -434,17 +443,7 @@ This is not like the default `evil-yank-line'."
 When THEME is not given, `lispville-key-theme' will be used instead."
   (unless theme (setq theme lispyville-key-theme))
   (when (memq 'operators theme)
-    (evil-define-key 'normal lispyville-mode-map
-      "y" #'lispyville-yank
-      "d" #'lispyville-delete
-      "c" #'lispyville-change
-      "Y" #'lispyville-yank-line
-      "D" #'lispyville-delete-line
-      "C" #'lispyville-change-line
-      "x" #'lispyville-delete-char-or-splice
-      "X" #'lispyville-delete-char-or-splice-backwards
-      "s" #'lispyville-substitute)
-    (evil-define-key 'visual lispyville-mode-map
+    (lispyville--define-key '(normal visual)
       "y" #'lispyville-yank
       "d" #'lispyville-delete
       "c" #'lispyville-change
