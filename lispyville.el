@@ -451,7 +451,9 @@ When THEME is not given, `lispville-key-theme' will be used instead."
       "D" #'lispyville-delete-line
       "C" #'lispyville-change-line
       "x" #'lispyville-delete-char-or-splice
-      "X" #'lispyville-delete-char-or-splice-backwards
+      "X" #'lispyville-delete-char-or-splice-backwards))
+  (when (memq 's-operators theme)
+    (lispyville--define-key '(normal visual)
       "s" #'lispyville-substitute)))
 
 (lispyville-set-key-theme)
