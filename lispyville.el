@@ -442,19 +442,27 @@ MAPS are the keys and commands to define in lispyville-mode-map."
   "Binds keys in lispyville-mode-map according to THEME.
 When THEME is not given, `lispville-key-theme' will be used instead."
   (unless theme (setq theme lispyville-key-theme))
-  (when (memq 'operators theme)
-    (lispyville--define-key '(normal visual)
-      "y" #'lispyville-yank
-      "d" #'lispyville-delete
-      "c" #'lispyville-change
-      "Y" #'lispyville-yank-line
-      "D" #'lispyville-delete-line
-      "C" #'lispyville-change-line
-      "x" #'lispyville-delete-char-or-splice
-      "X" #'lispyville-delete-char-or-splice-backwards))
-  (when (memq 's-operators theme)
-    (lispyville--define-key '(normal visual)
-      "s" #'lispyville-substitute)))
+  (dolist (item theme)
+    (let ((type (if (listp item)
+                    (car item)
+                  item))
+          (states (if (listp item)
+                      (cdr item)
+                    '(normal visual))))
+      (when (eq type 'operators)
+        (lispyville--define-key states
+          "y" #'lispyville-yank
+          "d" #'lispyville-delete
+          "c" #'lispyville-change
+          "Y" #'lispyville-yank-line
+          "D" #'lispyville-delete-line
+          "C" #'lispyville-change-line
+          "x" #'lispyville-delete-char-or-splice
+          "X" #'lispyville-delete-char-or-splice-backwards
+          "W" #'lispyville-left))
+      (when (eq type 's-operators)
+        (lispyville--define-key states
+          "s" #'lispyville-substitute)))))
 
 (lispyville-set-key-theme)
 
