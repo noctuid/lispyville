@@ -440,12 +440,14 @@ This is not like the default `evil-yank-line'."
   (lispyville-change beg end type register yank-handler
                      #'lispyville-delete-whole-line))
 
-(evil-define-operator lispyville-delete-char-or-splice (beg end type register yank-handler)
+(evil-define-operator lispyville-delete-char-or-splice
+    (beg end type register yank-handler)
   "Deletes and copies the region by splicing unmatched delimiters."
   :motion evil-forward-char
   (interactive "<R><x>")
   (cond ((eq type 'block)
-         (lispyville--rectangle-safe-delete-by-splice beg end t register yank-handler))
+         (lispyville--rectangle-safe-delete-by-splice beg end t
+                                                      register yank-handler))
         (t
          (lispyville--safe-delete-by-splice beg end t register yank-handler))))
 
