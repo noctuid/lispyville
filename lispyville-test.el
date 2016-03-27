@@ -175,6 +175,11 @@
                      "2cc")
                    "(\n |)")))
 
+(ert-deftest lispyville-change-whole-line ()
+  (should (string= (lispyville-with "((\n  |(a b)))"
+                     "S")
+                   "((\n  |))")))
+
 ;; pretty much already tested
 ;; (ert-deftest lispyville-change-line ()
 ;;   )

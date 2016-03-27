@@ -425,6 +425,21 @@ This is not like the default `evil-yank-line'."
   (lispyville-change beg end type register yank-handler
                      #'lispyville-delete-line))
 
+(evil-define-operator evil-delete-whole-line
+    (beg end type register yank-handler)
+  "Delete whole line."
+  :motion evil-line
+  (interactive "<R><x>")
+  (lispyville-delete beg end type register yank-handler))
+
+(evil-define-operator lispyville-change-whole-line
+    (beg end type register yank-handler)
+  "Change whole line while respecting parentheses."
+  :motion evil-line
+  (interactive "<R><x>")
+  (lispyville-change beg end type register yank-handler
+                     #'lispyville-delete-whole-line))
+
 (evil-define-operator lispyville-delete-char-or-splice (beg end type register yank-handler)
   "Deletes and copies the region by splicing unmatched delimiters."
   :motion evil-forward-char
