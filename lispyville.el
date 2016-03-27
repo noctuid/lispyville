@@ -46,7 +46,12 @@ lispyville has been loaded."
   :type '(repeat :tag "Key Themes"
           (choice
            (const :tag "Remap the operator keys to their safe versions."
-            operators))))
+            operators)
+           (const :tag "Remap the s and S operator keys to their safe version."
+            s-operators)
+           (const
+            :tag "Extra motions similar to those given by evil-cleverparens."
+            additional-movement))))
 
 (defcustom lispyville-dd-stay-with-closing-delimiters nil
   "When non-nil, dd (`lispyville-delete') will move the point up a line.
@@ -55,6 +60,17 @@ deleted."
   :group 'lispyville
   :type 'boolean)
 
+(defcustom lispyville-motions-put-into-special nil
+  "Applicable motions will enter insert or emacs state.
+This will only happen when they are not called with an operator or in visual
+mode."
+  :group 'lispyville
+  :type '(choice
+          (const :tag "Enter emacs state to get into special." emacs)
+          (const :tag "Enter insert state to get into special." insert)
+          (const :tag "Same as 'insert." t)
+          (const :tag "Don't enter special after motions." nil)))
+
 ;;;###autoload
 (define-minor-mode lispyville-mode
     "A minor mode for integrating evil with lispy."
@@ -62,7 +78,7 @@ deleted."
   :keymap (make-sparse-keymap)
   (evil-normalize-keymaps))
 
-;;; Helpers
+;;; * Helpers
 (defun lispyville--in-string-p ()
   "Return whether the point is in a string.
 Unlike `lispy--in-string-p', |\"\" is not considered to be inside the string."
@@ -71,18 +87,23 @@ Unlike `lispy--in-string-p', |\"\" is not considered to be inside the string."
          (not (= (car str) (point))))))
 
 (defun lispyville--at-left-p ()
-  "Return whether the point is before an opening delimiter."
-  (and (or (looking-at lispy-left)
-           (and (looking-at "\"")
-                (not (lispyville--in-string-p))))
-       (not (looking-back "\\\\." (- (point) 2)))))
+  "Return whether the point is before an opening delimiter.
+Opening delimiters inside strings and comments are ignored."
+  (and (not (lispy--in-comment-p))
+       (not (lispyville--in-string-p))
+       (or (looking-at lispy-left)
+           (looking-at "\""))
+       (not (looking-back "\\\\" (- (point) 2)))))
 
 (defun lispyville--at-right-p ()
-  "Return whether the point is after a closing delimiter."
-  (and (or (looking-at lispy-right)
+  "Return whether the point is before a closing delimiter.
+Closing delimiters inside strings and comments are ignored."
+  (and (not (lispy--in-comment-p))
+       (or (and (looking-at lispy-right)
+                (not (lispyville--in-string-p)))
            (and (looking-at "\"")
                 (lispyville--in-string-p)))
-       (not (looking-back "\\\\." (- (point) 2)))))
+       (not (looking-back "\\\\" (- (point) 2)))))
 
 (defun lispyville--yank-text (text &optional register yank-handler)
   "Like `evil-yank-characters' but takes TEXT directly instead of a region.
@@ -148,7 +169,7 @@ REGISTER, and YANK-HANDLER all have the same effect as in
   (save-excursion
     (if (looking-at "\"")
         (cond ((save-excursion
-                 (left-char)
+                 (backward-char)
                  (lispy--in-string-p))
                (let ((right-quote (point)))
                  (lispy--exit-string)
@@ -250,7 +271,7 @@ evil-cleverparens."
       (t
        (insert text)))))
 
-;; Commands
+;;; * Commands
 ;; TODO make motion
 (defun lispyville-first-non-blank ()
   "Like `evil-first-non-blank' but skips opening delimiters.
@@ -261,7 +282,7 @@ This is lispyville equivalent of `evil-cp-first-non-blank-non-opening'."
               (lispyville--at-left-p))
     (forward-char)))
 
-;;; Operators
+;;; * Operators
 (evil-define-operator lispyville-yank (beg end type register yank-handler)
   "Like `evil-yank' but will not copy unmatched delimiters."
   :move-point nil
@@ -336,7 +357,7 @@ This is not like the default `evil-yank-line'."
                     (save-excursion
                       (goto-char (line-end-position))
                       (when (looking-back "\"")
-                        (left-char)
+                        (backward-char)
                         (delete-char -1)))
                     (unless lispyville-dd-stay-with-closing-delimiters
                       (forward-line 1))))
@@ -426,12 +447,124 @@ This is not like the default `evil-yank-line'."
   (interactive "<R><x>")
   (lispyville-change beg end type register))
 
-;;; Keybindings
+;;; * Motions
+;; ** Additional Movement Key Theme
+(evil-define-motion lispyville-forward-sexp (count)
+  "This is an evil motion equivalent of `forward-sexp'."
+  ;; TODO maybe forward-sexp-or-comment would be more useful
+  ;; TODO also consider having it jump to the next level for failure
+  ;; like evil-cp motion does
+  (forward-sexp (or count 1)))
+
+(evil-define-motion lispyville-backward-sexp (count)
+  "This is an evil motion equivalent of `backward-sexp'."
+  (backward-sexp (or count 1)))
+
+(defun lispyville--maybe-insert (&optional move-right)
+  "Potentially enter insert or emacs state.
+The behavior depends on the value of `lispyville-motions-put-into-special'.
+If MOVE-RIGHT is non-nil, move right before changing state."
+  (when (and lispyville-motions-put-into-special
+             (not (or (evil-operator-state-p)
+                      (evil-visual-state-p))))
+    (when move-right
+      (forward-char))
+    (if (eq lispyville-motions-put-into-special 'emacs)
+        (evil-emacs-state)
+      (evil-insert-state))))
+
+(evil-define-motion lispyville-beginning-of-defun (count)
+  "This is the evil motion equivalent of `beginning-of-defun'.
+This won't jump to the beginning of the buffer if there is no paren there."
+  (beginning-of-defun (or count 1))
+  (lispyville--maybe-insert))
+
+(evil-define-motion lispyville-end-of-defun (count)
+  "This is the evil motion equivalent of `end-of-defun'.
+This won't jump to the end of the buffer if there is no paren there."
+  (end-of-defun (or count 1))
+  (re-search-backward lispy-right nil t)
+  (lispyville--maybe-insert t))
+
+;; lispy-flow like (and reverse)
+(defun lispyville--move-to-delimiter (count &optional type)
+  "Move COUNT times to the next TYPE delimiter.
+Move backwards when COUNT is negative. Unlike `evil-cp-next-closing', this won't
+ jump into comments or strings."
+  (setq type (or type 'right))
+  (let ((positive (> count 0))
+        (regex (concat (if (eq type 'left)
+                           (substring lispy-left 0 -1)
+                         (substring  lispy-right 0 -1))
+                       "\"]"))
+        (initial-pos (point))
+        success)
+    (dotimes (_ (abs count))
+      (when positive
+        (forward-char))
+      (while
+          (and (if positive
+                   (re-search-forward regex nil t)
+                 (re-search-backward regex nil t))
+               (setq success t)
+               (save-excursion
+                 (goto-char (match-beginning 0))
+                 (or
+                  (lispy--in-comment-p)
+                  (not (if (eq type 'left)
+                           (lispyville--at-left-p)
+                         (lispyville--at-right-p))))))
+        (setq success nil))
+      (if success
+          (goto-char (match-beginning 0))
+        (goto-char initial-pos)))))
+
+(evil-define-motion lispyville-next-opening (count)
+  "Move to the next opening delimiter COUNT times."
+  (lispyville--move-to-delimiter (or count 1) 'left)
+  (unless (looking-at "\"")
+    (lispyville--maybe-insert)))
+
+(evil-define-motion lispyville-previous-opening (count)
+  "Move to the previous opening delimiter COUNT times."
+  (lispyville--move-to-delimiter (- (or count 1)) 'left)
+  (unless (looking-at "\"")
+    (lispyville--maybe-insert)))
+
+(evil-define-motion lispyville-next-closing (count)
+  "Move to the next closing delimiter COUNT times."
+  (lispyville--move-to-delimiter (or count 1))
+  (unless (looking-at "\"")
+    (lispyville--maybe-insert t)))
+
+(evil-define-motion lispyville-previous-closing (count)
+  "Move to the previous closing delimiter COUNT times."
+  (lispyville--move-to-delimiter (- (or count 1)))
+  (unless (looking-at "\"")
+    (lispyville--maybe-insert t)))
+
+(evil-define-motion lispyville-backward-up-list (count)
+  "This is the evil motion equivalent of `lispy-left' (or `backward-up-list').
+This is comparable to `evil-cp-backward-up-sexp'. It does not have lispy's
+behavior on outlines."
+  (lispy-left (or count 1)))
+
+(defalias 'lispyville-left 'lispyville-backward-up-list)
+
+(evil-define-motion lispyville-up-list (count)
+  "This is the evil motion equivalent of `lispy-right' (or `up-list').
+This is comparable to `evil-cp-up-sexp'. It does not have lispy's behavior
+on outlines."
+  (lispy-right (or count 1)))
+
+(defalias 'lispyville-right 'lispyville-up-list)
+
+;;; * Keybindings
 (defmacro lispyville--define-key (states &rest maps)
   "Helper function for defining keys in multiple STATES at once.
 MAPS are the keys and commands to define in lispyville-mode-map."
   (declare (indent 1))
-  (let ((state (cl-gensym)))
+  (let ((state (cl-gensym "state")))
     `(if (listp ,states)
          (dolist (,state ,states)
            (evil-define-key ,state lispyville-mode-map ,@maps))
@@ -449,20 +582,34 @@ When THEME is not given, `lispville-key-theme' will be used instead."
           (states (if (listp item)
                       (cdr item)
                     '(normal visual))))
-      (when (eq type 'operators)
-        (lispyville--define-key states
-          "y" #'lispyville-yank
-          "d" #'lispyville-delete
-          "c" #'lispyville-change
-          "Y" #'lispyville-yank-line
-          "D" #'lispyville-delete-line
-          "C" #'lispyville-change-line
-          "x" #'lispyville-delete-char-or-splice
-          "X" #'lispyville-delete-char-or-splice-backwards
-          "W" #'lispyville-left))
-      (when (eq type 's-operators)
-        (lispyville--define-key states
-          "s" #'lispyville-substitute)))))
+      (cond ((eq type 'operators)
+             (lispyville--define-key states
+               "y" #'lispyville-yank
+               "d" #'lispyville-delete
+               "c" #'lispyville-change
+               "Y" #'lispyville-yank-line
+               "D" #'lispyville-delete-line
+               "C" #'lispyville-change-line
+               "x" #'lispyville-delete-char-or-splice
+               "X" #'lispyville-delete-char-or-splice-backwards))
+            ((eq type 's-operators)
+             (lispyville--define-key states
+               "s" #'lispyville-substitute))
+            ((eq type 'additional-movement)
+             (lispyville--define-key states
+               "H" #'lispyville-backward-sexp
+               "L" #'lispyville-forward-sexp
+               (kbd "M-h") #'lispyville-beginning-of-defun
+               (kbd "M-l") #'lispyville-end-of-defun
+               ;; reverse of lispy-flow
+               "[" #'lispyville-previous-opening
+               "]" #'lispyville-next-closing
+               ;; like lispy-flow
+               "{" #'lispyville-next-opening
+               "}" #'lispyville-previous-closing
+               ;; like lispy-left and lispy-right
+               "(" #'lispyville-backward-up-list
+               ")" #'lispyville-up-list))))))
 
 (lispyville-set-key-theme)
 

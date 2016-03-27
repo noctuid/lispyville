@@ -1,5 +1,7 @@
 (require 'lispyville)
-(lispyville-set-key-theme (list 'operators 's-operators))
+(lispyville-set-key-theme '(operators
+                            s-operators
+                            additional-movement))
 
 (defmacro lispyville-with (in &rest body)
   "This is `lispy-with' modified for lispyville."
@@ -93,7 +95,7 @@
                    "a (b c) d|"))
   ;; counts; 2Y doesn't work normally with evil actually
   ;; probably not that useful either
-  ;; (should (string= (lispyville-with "((\n  |(a b)\n  (c d))"
+  ;; (should (string= (lispyville-with "(\n  |(a b)\n  (c d))"
   ;;                    "2Y"
   ;;                    (lispyville-replace-with-last-kill))
   ;;                  "  (a b)\n  (c d)|"))
@@ -248,3 +250,150 @@
   (should (string= (lispyville-with "|   ([{\"a string\"}])"
                      (lispyville-first-non-blank))
                    "   ([{\"|a string\"}])")))
+
+(ert-deftest lispyville-forward-sexp ()
+  (should (string= (lispyville-with "(|a b c)" "L")
+                   "(a| b c)"))
+  (should (string= (lispyville-with "(|a b c)" "2L")
+                   "(a b| c)"))
+  (should (string= (lispyville-with "(|a b c)" "3L")
+                   "(a b c|)"))
+  (should (string= (lispyville-with "(~|a b c)" "3L")
+                   "(~a b c|)"))
+  (should (string= (lispyville-with "(|a b (c e d))" "3L")
+                   "(a b (c e d)|)")))
+
+(ert-deftest lispyville-backward-sexp ()
+  (should (string= (lispyville-with "(a b c|)" "H")
+                   "(a b |c)"))
+  (should (string= (lispyville-with "(a b c|)" "2H")
+                   "(a |b c)"))
+  (should (string= (lispyville-with "(a b c|)" "3H")
+                   "(|a b c)"))
+  (should (string= (lispyville-with "(a b c~|)" "3H")
+                   "(|a b c~)"))
+  (should (string= (lispyville-with "(a b (c e d)|)" "3H")
+                   "(|a b (c e d))")))
+
+(ert-deftest lispyville-beginning-of-defun ()
+  (should (string= (lispyville-with "(a |b c)" (kbd "M-h"))
+                   "|(a b c)")))
+
+(ert-deftest lispyville-end-of-defun ()
+  (should (string= (lispyville-with "(a |b c)" (kbd "M-l"))
+                   "(a b c|)"))
+  (let ((lispyville-motions-put-into-special t))
+    (should (string= (lispyville-with "(a |b c)" (kbd "M-l"))
+                     "(a b c)|"))))
+
+(ert-deftest lispyville-next-opening ()
+  (should (string= (lispyville-with "|(((a b c)))" "{")
+                   "(|((a b c)))"))
+  (should (string= (lispyville-with "(|((a b c)))" "{")
+                   "((|(a b c)))"))
+  (should (string= (lispyville-with "|(((a b c)))" "2{")
+                   "((|(a b c)))"))
+  (should (string= (lispyville-with "~|(((a b c)))" "{")
+                   "~(|((a b c)))"))
+  (should (string= (lispyville-with "~(|((a b c)))" "{")
+                   "~((|(a b c)))"))
+  (should (string= (lispyville-with "~|(((a b c)))" "2{")
+                   "~((|(a b c)))"))
+  (should (string= (lispyville-with "|a\nb\n(c)" "{")
+                   "a\nb\n|(c)"))
+  (should (string= (lispyville-with "\"|\\\"{[(a)]}\\\"\" (b)" "{")
+                   "\"\\\"{[(a)]}\\\"\" |(b)"))
+  (should (string= (lispyville-with "|;; ([{\n(a)" "{")
+                   ";; ([{\n|(a)"))
+  (should (string= (lispyville-with "|a\n;; (" "{")
+                   "|a\n;; (")))
+
+(ert-deftest lispyville-previous-opening ()
+  (should (string= (lispyville-with "(((a |b c)))" "[")
+                   "((|(a b c)))"))
+  (should (string= (lispyville-with "((|(a b c)))" "[")
+                   "(|((a b c)))"))
+  (should (string= (lispyville-with "(|((a b c)))" "[")
+                   "|(((a b c)))"))
+  (should (string= (lispyville-with "(((a |b c)))" "2[")
+                   "(|((a b c)))"))
+  (should (string= (lispyville-with "(((a |b c)))" "3[")
+                   "|(((a b c)))"))
+  (should (string= (lispyville-with "(a)\nb\nc|" "[")
+                   "|(a)\nb\nc"))
+  (should (string= (lispyville-with "\"\\\"{[(a)]}\\\"\" |(b)" "[")
+                   "|\"\\\"{[(a)]}\\\"\" (b)"))
+  (should (string= (lispyville-with "(a)\n;; ([{|" "[")
+                   "|(a)\n;; ([{"))
+  (should (string= (lispyville-with ";; (\n|a" "[")
+                   ";; (\n|a")))
+
+(ert-deftest lispyville-next-closing ()
+  (should (string= (lispyville-with "|(((a b c)))" "]")
+                   "(((a b c|)))"))
+  (should (string= (lispyville-with "(((a b c|)))" "]")
+                   "(((a b c)|))"))
+  (should (string= (lispyville-with "(((a b c|)))" "]")
+                   "(((a b c)|))"))
+  (should (string= (lispyville-with "(((a b c)|))" "]")
+                   "(((a b c))|)"))
+  (should (string= (lispyville-with "|(((a b c)))" "3]")
+                   "(((a b c))|)"))
+  (should (string= (lispyville-with "|a\nb\n(c)" "]")
+                   "a\nb\n(c|)"))
+  (should (string= (lispyville-with "\"|\\\"{[(a)]}\\\"\"" "]")
+                   "\"\\\"{[(a)]}\\\"|\""))
+  (should (string= (lispyville-with "|;; )]}\n(a)" "]")
+                   ";; )]}\n(a|)"))
+  (should (string= (lispyville-with "|a\n;; )" "]")
+                   "|a\n;; )"))
+  (let ((lispyville-motions-put-into-special t))
+    (should (string= (lispyville-with "(a |b c)" "]")
+                     "(a b c)|"))
+    (should (string= (lispyville-with "\"|a b\"" "]")
+                     "\"a b|\""))))
+
+(ert-deftest lispyville-previous-closing ()
+  (should (string= (lispyville-with "(((a b c)))|" "}")
+                   "(((a b c))|)"))
+  (should (string= (lispyville-with "(((a b c))|)" "}")
+                   "(((a b c)|))"))
+  (should (string= (lispyville-with "(((a b c)|))" "}")
+                   "(((a b c|)))"))
+  (should (string= (lispyville-with "(((a b c)))|" "3}")
+                   "(((a b c|)))"))
+  (should (string= (lispyville-with "(a)\nb\nc|" "}")
+                   "(a|)\nb\nc"))
+  (should (string= (lispyville-with "(a) \"\\\"{[(b)]}\\\"|\"" "}")
+                   "(a|) \"\\\"{[(b)]}\\\"\""))
+  (should (string= (lispyville-with "(a)\n;; }])|" "}")
+                   "(a|)\n;; }])"))
+  (should (string= (lispyville-with ";; )\n|a" "}")
+                   ";; )\n|a"))
+  (let ((lispyville-motions-put-into-special t))
+    (should (string= (lispyville-with "(a b c) (d|)" "}")
+                     "(a b c)| (d)"))
+    (should (string= (lispyville-with "\"a b\" (a|)" "}")
+                     "\"a b|\" (a)"))))
+
+;; tests in visual mode for up-list
+(ert-deftest lispyville-backward-up-list ()
+  (should (string= (lispyville-with
+                       "(cond ((a)\n       (b))\n      ((c)\n       |(d)))"
+                     "(")
+                   "(cond ((a)\n       (b))\n      |((c)\n       (d)))"))
+  (should (string= (lispyville-with
+                       "(cond ((a)\n       (b))\n      |((c)\n       (d)))"
+                     "(")
+                   "|(cond ((a)\n       (b))\n      ((c)\n       (d)))")))
+
+;; TODO these fail with the keybindings for some reason
+(ert-deftest lispyville-up-list ()
+  (should (string= (lispyville-with
+                       "(cond ((a)|\n       (b))\n      ((c)\n       (d)))"
+                     (lispyville-up-list 1))
+                   "(cond ((a)\n       (b))|\n      ((c)\n       (d)))"))
+  (should (string= (lispyville-with
+                       "(cond ((a)\n       (b))|\n      ((c)\n       (d)))"
+                     (lispyville-up-list 1))
+                   "(cond ((a)\n       (b))\n      ((c)\n       (d)))|")))
