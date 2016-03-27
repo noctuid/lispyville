@@ -117,7 +117,6 @@ REGISTER and YANK-HANDLER have the same effect."
   (unless (eq register ?_)
     (kill-new text)))
 
-;; TODO: behavior in comment and strings; make pull request to lispy
 (defun lispyville--safe-manipulate
     (beg end &optional delete yank register yank-handler)
   "Return the text from BEG to END excluding unmatched delimiters.
