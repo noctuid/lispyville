@@ -610,7 +610,8 @@ When THEME is not given, `lispville-key-theme' will be used instead."
                "X" #'lispyville-delete-char-or-splice-backwards))
             ((eq type 's-operators)
              (lispyville--define-key states
-               "s" #'lispyville-substitute))
+               "s" #'lispyville-substitute
+               "S" #'lispyville-change-whole-line))
             ((eq type 'additional-movement)
              (lispyville--define-key states
                "H" #'lispyville-backward-sexp
