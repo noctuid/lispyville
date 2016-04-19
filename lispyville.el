@@ -563,7 +563,8 @@ Move backwards when COUNT is negative. Unlike `evil-cp-next-closing', this won't
   "This is the evil motion equivalent of `lispy-left' (or `backward-up-list').
 This is comparable to `evil-cp-backward-up-sexp'. It does not have lispy's
 behavior on outlines."
-  (lispy-left (or count 1)))
+  (lispy-left (or count 1))
+  (lispyville--maybe-insert))
 
 (defalias 'lispyville-left 'lispyville-backward-up-list)
 
@@ -571,7 +572,8 @@ behavior on outlines."
   "This is the evil motion equivalent of `lispy-right' (or `up-list').
 This is comparable to `evil-cp-up-sexp'. It does not have lispy's behavior
 on outlines."
-  (lispy-right (or count 1)))
+  (lispy-right (or count 1))
+  (lispyville--maybe-insert))
 
 (defalias 'lispyville-right 'lispyville-up-list)
 
