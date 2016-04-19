@@ -575,6 +575,59 @@ on outlines."
 
 (defalias 'lispyville-right 'lispyville-up-list)
 
+;;; * Integration Between Visual State and Lispy's Special Mark State
+;; ** Using Both Separately
+(defun lispyville-normal-state ()
+  "The same as `evil-normal-state' but won't ever enter visual state.
+When the mark has been set by some lispy command, this will exit to normal state
+instead of entering visual state like `evil-normal-state' would."
+  (interactive)
+  (deactivate-mark)
+  (evil-normal-state))
+
+(defmacro lispyville-wrap-command (command state)
+  "Return a function that executes COMMAND and then enters STATE."
+  `(defun ,(intern (concat "lispyville-wrap-" (symbol-name command))) ()
+     ,(concat "Call `" (symbol-name command) "' and then enter "
+              (symbol-name state) " state.")
+     (interactive)
+     (call-interactively #',command)
+     (evil-change-state ',state)))
+
+;; ** Using Just Lispy's Mark Keys
+(defun lispyville-enter-insert-when-marking ()
+  "Add a local hook to enter insert state when entering visual state.
+This is potentially useful for those who want to always use lispy's commands
+when the region is active instead of evil's visual states."
+  (add-hook 'evil-visual-state-entry-hook #'evil-insert-state nil t))
+
+(defun lispyville-enter-emacs-when-marking ()
+  "Add a local hook to enter emacs state when entering visual state.
+This is potentially useful for those who want to always use lispy's commands
+when the region is active instead of evil's visual states."
+  (add-hook 'evil-visual-state-entry-hook #'evil-emacs-state nil t))
+
+;; ** Using Just Visual State
+(defun lispyville-enter-visual-when-marking ()
+  "Add a local hook to enter normal state whenever the mark is activated.
+This is potentially useful for those who want to enter visual state after
+marking something using a command like `lispy-mark' from special."
+  (add-hook 'activate-mark-hook
+            (defun lispyville--enter-visual ()
+              "Enter visual state if not already in visual state."
+              (unless (eq evil-state 'visual)
+                ;; prevents from entering insert after exiting visual
+                (evil-normal-state nil)
+                (evil-visual-state)))
+            nil t))
+
+;; ** To Undo Changes After Testing
+(defun lispyville-remove-marking-hooks ()
+  "Remove lispyville marking related hooks."
+  (remove-hook 'evil-visual-state-entry-hook #'evil-insert-state t)
+  (remove-hook 'evil-visual-state-entry-hook #'evil-emacs-state t)
+  (remove-hook 'activate-mark-hook #'evil-visual-state t))
+
 ;;; * Keybindings
 (defmacro lispyville--define-key (states &rest maps)
   "Helper function for defining keys in multiple STATES at once.
@@ -626,7 +679,15 @@ When THEME is not given, `lispville-key-theme' will be used instead."
                "}" #'lispyville-previous-closing
                ;; like lispy-left and lispy-right
                "(" #'lispyville-backward-up-list
-               ")" #'lispyville-up-list))))))
+               ")" #'lispyville-up-list))
+            ((eq type 'escape)
+             (lispyville--define-key states
+               (kbd "<escape>") #'lispyville-normal-state))
+            ((eq type 'mark)
+             (lispyville--define-key states
+               "v" #'lispy-mark-symbol
+               "V" #'lispy-mark
+               (kbd "C-v") #'lispy-mark))))))
 
 (lispyville-set-key-theme)
 
