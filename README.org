@@ -64,8 +64,8 @@ The corresponding symbol is =s-operators=. I've separated the s operators becaus
 | =s= | ~lispyville-substitute~        |
 | =S= | ~lispyville-change-whole-line~ |
 
-** Additional Movement
-The corresponding symbol is =additional-movement=. This key theme is the equivalent of cleverparen's additional movement keys. =[= and =]= are like the reverse of ~lispy-flow~. ={= and =}= are like ~lispy-flow~. =(= and =)= are like ~lispy-left~ and ~lispy-right~. See [[More Fluid Transitioning Between Normal State and Special][here]] for some extra information.
+** Additional Movement Key Theme
+The corresponding symbol is =additional-movement=. This key theme is the equivalent of cleverparen's additional movement keys. =[= and =]= are like the reverse of ~lispy-flow~. ={= and =}= are like ~lispy-flow~. =(= and =)= are like ~lispy-left~ and ~lispy-right~. Also see [[https://github.com/noctuid/lispyville#more-fluid-transitioning-between-normal-state-and-special][here]] for some extra information on automatically enter special after executing these motions.
 
 | key   | command                         |
 |-------+---------------------------------|
@@ -79,6 +79,25 @@ The corresponding symbol is =additional-movement=. This key theme is the equival
 | =}=   | ~lispyville-previous-closing~   |
 | =(=   | ~lispyville-backward-up-list~   |
 | =)=   | ~lispyville-up-list~            |
+
+** Slurp/Barf Key Themes
+Two key themes are provided for slurping and barfing keybindings. Note that the commands in both key themes work with digit arguments. A positive argument will barf or slurp that many times like in cleverparens. Additionally, for the slurp commands, an argument of =-1= will slurp to the end of the line where the sexp after the closing paren ends, and an argument of =0= will slurp as far as possible. See the documentation for [[http://oremacs.com/lispy/#lispy-slurp][lispy-slurp]] for more information. Also see [[https://github.com/noctuid/lispyville#more-fluid-transitioning-between-normal-state-and-special][here]] for some extra information on automatically entering special after executing these commands.
+
+Note that the commands for both key themes will act on the paren /after/ the point, meaning that the point should be before a closing paren to be considered "on" it.
+
+The =slurp/barf-cp= key theme provides commands that act the same as cleverparens' slurp and barf keys or lispy's ~lispy-slurp-or-barf-right~ and ~lispy-slurp-or-barf-left~. =>= and =<= can be thought of arrows that will move the paren at point in the corresponding direction. If there is no paren at the point, the keys will take the action they would on a right paren but will not move the point.
+
+| key | command        |
+|-----+----------------|
+| =>= | ~lispyville->~ |
+| =<= | ~lispyville-<~ |
+
+The =slurp/barf-lispy= key theme provides commands that act the same as the default ~lispy-slurp~ and ~lispy-barf~. In this case, =>= and =<= can be thought to correspond to "grow" and "shrink" respectively. =>= will always slurp, and =<= will always barf. If there is no paren at the point, the keys will take the action they would on a right paren but will not move the point.
+
+| key | command                  |
+|-----+--------------------------|
+| =>= | ~lispyville-slurp~       |
+| =<= | ~lispyville-barf~        |
 
 ** Escape Key Theme
 The corresponding symbol is =escape=. See [[Using Both Separately][here]] for more information.
@@ -103,6 +122,8 @@ Getting to special when in insert or emacs state is already pretty easy. You can
 Lispyville provides an option that will automatically enter insert or emacs state for lispyville navigation commands that would put you at a paren. To enable this behavior, =lispyville-motions-put-into-special= can be set to a non-nil value. If you prefer to edit in emacs-state, you can set it to the symbol =emacs=.
 
 Note that this behavior will not affect the use of motions with an operator or in visual state (which wouldn't make sense).
+
+There is also an option for commands called =lispyville-commands-put-into-special= that can be customized in the same way. The currently applicable commands are the slurp and barf commands.
 
 ** Visual State and Special Integration
 Lispyville tries to be unobtrusive by default, only rebinding the major operator keys. Since there are many potential ways to better integrate evil's visual state with lispy's special (with the region active), lispyville doesn't make a default choice for the user.

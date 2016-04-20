@@ -69,7 +69,16 @@ mode."
           (const :tag "Enter emacs state to get into special." emacs)
           (const :tag "Enter insert state to get into special." insert)
           (const :tag "Same as 'insert." t)
-          (const :tag "Don't enter special after motions." nil)))
+          (const :tag "Don't enter special after applicable motions." nil)))
+
+(defcustom lispyville-commands-put-into-special nil
+  "Applicable commands will enter insert or emacs state."
+  :group 'lispyville
+  :type '(choice
+          (const :tag "Enter emacs state to get into special." emacs)
+          (const :tag "Enter insert state to get into special." insert)
+          (const :tag "Same as 'insert." t)
+          (const :tag "Don't enter special after applicable commands." nil)))
 
 ;;;###autoload
 (define-minor-mode lispyville-mode
@@ -270,17 +279,6 @@ evil-cleverparens."
       (t
        (insert text)))))
 
-;;; * Commands
-;; TODO make motion
-(defun lispyville-first-non-blank ()
-  "Like `evil-first-non-blank' but skips opening delimiters.
-This is lispyville equivalent of `evil-cp-first-non-blank-non-opening'."
-  (interactive)
-  (evil-first-non-blank)
-  (while (and (<= (point) (point-at-eol))
-              (lispyville--at-left-p))
-    (forward-char)))
-
 ;;; * Operators
 (evil-define-operator lispyville-yank (beg end type register yank-handler)
   "Like `evil-yank' but will not copy unmatched delimiters."
@@ -476,31 +474,40 @@ This is not like the default `evil-yank-line'."
   "This is an evil motion equivalent of `backward-sexp'."
   (backward-sexp (or count 1)))
 
-(defun lispyville--maybe-insert (&optional move-right)
-  "Potentially enter insert or emacs state.
+(defun lispyville--maybe-insert-into-special (&optional command)
+  "Potentially enter insert or emacs state to get into special.
 The behavior depends on the value of `lispyville-motions-put-into-special'.
-If MOVE-RIGHT is non-nil, move right before changing state."
-  (when (and lispyville-motions-put-into-special
-             (not (or (evil-operator-state-p)
-                      (evil-visual-state-p))))
-    (when move-right
-      (forward-char))
-    (if (eq lispyville-motions-put-into-special 'emacs)
-        (evil-emacs-state)
-      (evil-insert-state))))
+When at a closing paren, move right before inserting. Otherwise, if not at
+an opening paren or after a closing paren, call `lispy-right' to get to special.
+If COMMAND is non-nil, depend on the value of
+`lispyville-commands-put-into-special' instead."
+  (let ((state (if command
+                   lispyville-commands-put-into-special
+                 lispyville-motions-put-into-special)))
+    (when (and state
+               (not (or (evil-operator-state-p)
+                        (evil-visual-state-p))))
+      (cond ((looking-at lispy-right)
+             (forward-char))
+            ((not (or (looking-at lispy-left)
+                      (looking-back lispy-right (1- (point)))))
+             (lispy-right 1)))
+      (if (eq state 'emacs)
+          (evil-emacs-state)
+        (evil-insert-state)))))
 
 (evil-define-motion lispyville-beginning-of-defun (count)
   "This is the evil motion equivalent of `beginning-of-defun'.
 This won't jump to the beginning of the buffer if there is no paren there."
   (beginning-of-defun (or count 1))
-  (lispyville--maybe-insert))
+  (lispyville--maybe-insert-into-special))
 
 (evil-define-motion lispyville-end-of-defun (count)
   "This is the evil motion equivalent of `end-of-defun'.
 This won't jump to the end of the buffer if there is no paren there."
   (end-of-defun (or count 1))
   (re-search-backward lispy-right nil t)
-  (lispyville--maybe-insert t))
+  (lispyville--maybe-insert-into-special))
 
 ;; lispy-flow like (and reverse)
 (defun lispyville--move-to-delimiter (count &optional type)
@@ -539,32 +546,32 @@ Move backwards when COUNT is negative. Unlike `evil-cp-next-closing', this won't
   "Move to the next opening delimiter COUNT times."
   (lispyville--move-to-delimiter (or count 1) 'left)
   (unless (looking-at "\"")
-    (lispyville--maybe-insert)))
+    (lispyville--maybe-insert-into-special)))
 
 (evil-define-motion lispyville-previous-opening (count)
   "Move to the previous opening delimiter COUNT times."
   (lispyville--move-to-delimiter (- (or count 1)) 'left)
   (unless (looking-at "\"")
-    (lispyville--maybe-insert)))
+    (lispyville--maybe-insert-into-special)))
 
 (evil-define-motion lispyville-next-closing (count)
   "Move to the next closing delimiter COUNT times."
   (lispyville--move-to-delimiter (or count 1))
   (unless (looking-at "\"")
-    (lispyville--maybe-insert t)))
+    (lispyville--maybe-insert-into-special)))
 
 (evil-define-motion lispyville-previous-closing (count)
   "Move to the previous closing delimiter COUNT times."
   (lispyville--move-to-delimiter (- (or count 1)))
   (unless (looking-at "\"")
-    (lispyville--maybe-insert t)))
+    (lispyville--maybe-insert-into-special)))
 
 (evil-define-motion lispyville-backward-up-list (count)
   "This is the evil motion equivalent of `lispy-left' (or `backward-up-list').
 This is comparable to `evil-cp-backward-up-sexp'. It does not have lispy's
 behavior on outlines."
   (lispy-left (or count 1))
-  (lispyville--maybe-insert))
+  (lispyville--maybe-insert-into-special))
 
 (defalias 'lispyville-left 'lispyville-backward-up-list)
 
@@ -573,9 +580,107 @@ behavior on outlines."
 This is comparable to `evil-cp-up-sexp'. It does not have lispy's behavior
 on outlines."
   (lispy-right (or count 1))
-  (lispyville--maybe-insert))
+  (lispyville--maybe-insert-into-special))
 
 (defalias 'lispyville-right 'lispyville-up-list)
+
+;;; * Commands
+;; TODO make motion
+(defun lispyville-first-non-blank ()
+  "Like `evil-first-non-blank' but skips opening delimiters.
+This is lispyville equivalent of `evil-cp-first-non-blank-non-opening'."
+  (interactive)
+  (evil-first-non-blank)
+  (while (and (<= (point) (point-at-eol))
+              (lispyville--at-left-p))
+    (forward-char)))
+
+;; ** Slurp/barf Key Themes
+(evil-define-command lispyville-> (count)
+  "Slurp or barf COUNT times.
+When the point is before a opening paren, barf. When the point is before a
+closing paren, slurp. Slurp on the right without moving the point when before
+neither (unless `lispyville-commands-put-into-special' is non-nil). This is the
+lispyville equivalent of `evil-cp->' and `lispy-slurp-or-barf-right'."
+  (interactive "<c>")
+  (setq count (or count 1))
+  (cond ((looking-at lispy-left)
+         (lispy-barf count))
+        ((looking-at lispy-right)
+         (forward-char)
+         (lispy-slurp count)
+         (backward-char))
+        (t
+         (save-excursion
+           (lispy-right 1)
+           (lispy-slurp count))))
+  (lispyville--maybe-insert-into-special t))
+
+(evil-define-command lispyville-< (count)
+  "Slurp or barf COUNT times.
+When the point is before a opening paren, slurp. When the point is before a
+closing paren, Barf. Barf on the right without moving the point when before
+neither (unless `lispyville-commands-put-into-special' is non-nil). This is
+the lispyville equivalent of `evil-cp-<' and `lispy-slurp-or-barf-left'."
+  (interactive "<c>")
+  (setq count (or count 1))
+  (cond ((looking-at lispy-left)
+         (lispy-slurp count))
+        ((looking-at lispy-right)
+         (forward-char)
+         (lispy-barf count)
+         (backward-char))
+        (t
+         (let (saved-pos)
+           (save-excursion
+             (lispy-right 1)
+             (lispy-barf count)
+             (setq saved-pos (point)))
+           (when lispyville-commands-put-into-special
+             (goto-char saved-pos)))))
+  (lispyville--maybe-insert-into-special t))
+
+(evil-define-command lispyville-slurp (count)
+  "Slurp COUNT times.
+When not at an opening or closing paren, slurp on the right without moving the
+point (unless `lispyville-commands-put-into-special' is non-nil). This is the
+lispyville equivalent of `lispy-slurp'."
+  (interactive "<c>")
+  (setq count (or count 1))
+  (cond ((looking-at lispy-left)
+         (lispy-slurp count))
+        ((looking-at lispy-right)
+         (forward-char)
+         (lispy-slurp count)
+         (backward-char))
+        (t
+         (save-excursion
+           (lispy-right 1)
+           (lispy-slurp count))))
+  (lispyville--maybe-insert-into-special t))
+
+(evil-define-command lispyville-barf (count)
+  "Barf COUNT times.
+When not at an opening or closing paren, barf on the right without moving the
+point (unless `lispyville-commands-put-into-special' is non-nil). This is the
+lispyville equivalent of `lispy-barf'."
+  (interactive "<c>")
+  (setq count (or count 1))
+  (cond ((looking-at lispy-left)
+         (lispy-barf count))
+        ((looking-at lispy-right)
+         (forward-char)
+         (lispy-barf count)
+         (backward-char))
+        (t
+         (let (saved-pos)
+           (save-excursion
+             (lispy-right 1)
+             (lispy-barf count)
+             (setq saved-pos (point)))
+           (when lispyville-commands-put-into-special
+             (goto-char saved-pos)))))
+  (lispyville--maybe-insert-into-special t))
 
 ;;; * Integration Between Visual State and Lispy's Special Mark State
 ;; ** Using Both Separately
@@ -682,6 +787,14 @@ When THEME is not given, `lispville-key-theme' will be used instead."
                ;; like lispy-left and lispy-right
                "(" #'lispyville-backward-up-list
                ")" #'lispyville-up-list))
+            ((eq type 'slurp/barf-cp)
+             (lispyville--define-key states
+               ">" #'lispyville->
+               "<" #'lispyville-<))
+            ((eq type 'slurp/barf-lispy)
+             (lispyville--define-key states
+               ">" #'lispyville-slurp
+               "<" #'lispyville-barf))
             ((eq type 'escape)
              (lispyville--define-key states
                (kbd "<escape>") #'lispyville-normal-state))
