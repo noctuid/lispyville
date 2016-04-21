@@ -99,6 +99,7 @@ The =slurp/barf-lispy= key theme provides commands that act the same as the defa
 | =>= | ~lispyville-slurp~       |
 | =<= | ~lispyville-barf~        |
 
+For both =<= bindings, if =lispyville-barf-stay-with-closing= is non-nil and barfing would move the closing delimiter behind the point, the point will instead be put on the closing delimiter.
 ** Escape Key Theme
 The corresponding symbol is =escape=. See [[Using Both Separately][here]] for more information.
 

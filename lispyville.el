@@ -60,6 +60,14 @@ deleted."
   :group 'lispyville
   :type 'boolean)
 
+(defcustom lispyville-barf-stay-with-closing nil
+  "When non-nil, stay with the closing delimiter when barfing.
+Specifically, this applies for `lispyville-barf' and `lispyville-<'
+when barfing would move the delimiter behind the point. This option
+only has an effect if `lispyville-commands-put-into-special' is nil."
+  :group 'lispyville
+  :type 'boolean)
+
 (defcustom lispyville-motions-put-into-special nil
   "Applicable motions will enter insert or emacs state.
 This will only happen when they are not called with an operator or in visual
@@ -636,8 +644,11 @@ the lispyville equivalent of `evil-cp-<' and `lispy-slurp-or-barf-left'."
              (lispy-right 1)
              (lispy-barf count)
              (setq saved-pos (point)))
-           (when lispyville-commands-put-into-special
-             (goto-char saved-pos)))))
+           (cond (lispyville-commands-put-into-special
+                  (goto-char saved-pos))
+                 ((and lispyville-barf-stay-with-closing
+                       (< saved-pos (point)))
+                  (goto-char (1- saved-pos)))))))
   (lispyville--maybe-insert-into-special t))
 
 (evil-define-command lispyville-slurp (count)
@@ -678,8 +689,11 @@ lispyville equivalent of `lispy-barf'."
              (lispy-right 1)
              (lispy-barf count)
              (setq saved-pos (point)))
-           (when lispyville-commands-put-into-special
-             (goto-char saved-pos)))))
+           (cond (lispyville-commands-put-into-special
+                  (goto-char saved-pos))
+                 ((and lispyville-barf-stay-with-closing
+                       (< saved-pos (point)))
+                  (goto-char (1- saved-pos)))))))
   (lispyville--maybe-insert-into-special t))
 
 ;;; * Integration Between Visual State and Lispy's Special Mark State
