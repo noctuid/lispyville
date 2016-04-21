@@ -587,7 +587,9 @@ behavior on outlines."
   "This is the evil motion equivalent of `lispy-right' (or `up-list').
 This is comparable to `evil-cp-up-sexp'. It does not have lispy's behavior
 on outlines."
+  (forward-char)
   (lispy-right (or count 1))
+  (backward-char)
   (lispyville--maybe-insert-into-special))
 
 (defalias 'lispyville-right 'lispyville-up-list)
