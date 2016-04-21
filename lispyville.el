@@ -53,7 +53,7 @@ lispyville has been loaded."
             :tag "Extra motions similar to those given by evil-cleverparens."
             additional-movement))))
 
-(defcustom lispyville-dd-stay-with-closing-delimiters nil
+(defcustom lispyville-dd-stay-with-closing nil
   "When non-nil, dd (`lispyville-delete') will move the point up a line.
 The point will be placed just before the unmatched delimiters that were not
 deleted."
@@ -364,7 +364,7 @@ This is not like the default `evil-yank-line'."
                       (when (looking-back "\"")
                         (backward-char)
                         (delete-char -1)))
-                    (unless lispyville-dd-stay-with-closing-delimiters
+                    (unless lispyville-dd-stay-with-closing
                       (forward-line 1))))
                  (t
                   (join-line 1)))

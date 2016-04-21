@@ -43,7 +43,7 @@ As an example, the following command will map the "operators" theme in normal an
   (lispyville-set-key-theme '(operators (escape insert))))
 #+end_src
 ** Operators Key Theme
-The corresponding symbol is =operators=. These are safe versions of the corresponding evil operators that won't unbalance parentheses. Like with cleverparens, =dd= will bring closing delimiters that are on a line by themselves to the previous line while =cc= won't. To disable this behavior, =lispyville-dd-stay-with-closing-delimiters= can be set to a non-nil value.
+The corresponding symbol is =operators=. These are safe versions of the corresponding evil operators that won't unbalance parentheses. Like with cleverparens, =dd= will bring closing delimiters that are on a line by themselves to the previous line while =cc= won't. To disable this behavior, =lispyville-dd-stay-with-closing= can be set to a non-nil value.
 
 | key | command                                      |
 |-----+----------------------------------------------|
