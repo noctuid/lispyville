@@ -586,7 +586,7 @@ behavior on outlines."
 (evil-define-motion lispyville-up-list (count)
   "This is the evil motion equivalent of `lispy-right' (or `up-list').
 This is comparable to `evil-cp-up-sexp'. It does not have lispy's behavior
-on outlines."
+on outlines. Unlike `up-list', it will keep the point on the closing delimiter."
   (forward-char)
   (lispy-right (or count 1))
   (backward-char)

@@ -394,16 +394,28 @@
                      "(")
                    "|(cond ((a)\n       (b))\n      ((c)\n       (d)))")))
 
-;; TODO these fail with the keybindings for some reason
 (ert-deftest lispyville-up-list ()
   (should (string= (lispyville-with
                        "(cond ((a)|\n       (b))\n      ((c)\n       (d)))"
-                     (lispyville-up-list 1))
-                   "(cond ((a)\n       (b))|\n      ((c)\n       (d)))"))
+                     ")")
+                   "(cond ((a)\n       (b)|)\n      ((c)\n       (d)))"))
   (should (string= (lispyville-with
                        "(cond ((a)\n       (b))|\n      ((c)\n       (d)))"
-                     (lispyville-up-list 1))
-                   "(cond ((a)\n       (b))\n      ((c)\n       (d)))|")))
+                     ")")
+                   "(cond ((a)\n       (b))\n      ((c)\n       (d))|)"))
+  (should (string= (lispyville-with "(((a |b c)))" ")")
+                   "(((a b c|)))"))
+  (should (string= (lispyville-with "(((a b c|)))" ")")
+                   "(((a b c)|))"))
+  (should (string= (lispyville-with "(((a b c)|))" ")")
+                   "(((a b c))|)"))
+  (let ((lispyville-motions-put-into-special t))
+    (should (string= (lispyville-with "(((a |b c)))" ")")
+                     "(((a b c)|))"))
+    (should (string= (lispyville-with "(((a b c|)))" ")")
+                     "(((a b c))|)"))
+    (should (string= (lispyville-with "(((a b c))|)" ")")
+                     "(((a b c)))|"))))
 
 (ert-deftest lispyville-> ()
   (should (string= (lispyville-with "((a|) (b c))" ">")
