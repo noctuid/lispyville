@@ -707,6 +707,52 @@ lispyville equivalent of `lispy-barf'."
                   (goto-char (1- saved-pos)))))))
   (lispyville--maybe-insert-into-special t))
 
+;; ** Additional Commands Key Theme
+(defun lispyville--drag (func count)
+  "Helper for `lispyville-drag-backward' and `lispyville-drag-forward'."
+  (cond ((region-active-p)
+         (funcall func count)
+         (when (= (point) (region-end))
+           (backward-char)))
+        ((or (looking-at lispy-left)
+             (looking-at lispy-right)
+             (lispyville--in-string-p)
+             (region-active-p))
+         (forward-char)
+         (funcall func count)
+         (backward-char))
+        (t
+         (let ((tick (buffer-chars-modified-tick))
+               (saved-pos (point))
+               offset)
+           (lispy-mark-symbol)
+           (setq offset (- (point) saved-pos))
+           (ignore-errors (funcall func count))
+           (deactivate-mark)
+           (backward-char offset)
+           (when (= tick (buffer-chars-modified-tick))
+             (funcall func count))))))
+
+(evil-define-command lispyville-drag-forward (count)
+  "Move the current atom or list forward COUNT times.
+If not possible to move the current atom forward, move the current list forward.
+This is the lispyville equivalent of `lispy-move-down' and
+`evil-cp-drag-forward'."
+  (interactive "<c>")
+  (lispyville--drag #'lispy-move-down (or count 1)))
+
+(defalias 'lispyville-move-down 'lispyville-drag-forward)
+
+(evil-define-command lispyville-drag-backward (count)
+  "Move the current atom or list backward COUNT times.
+If not possible to move the current atom back, move the current list back.
+This is the lispyville equivalent of `lispy-move-up' and
+`evil-cp-drag-backward'."
+  (interactive "<c>")
+  (lispyville--drag #'lispy-move-up (or count 1)))
+
+(defalias 'lispyville-move-up 'lispyville-drag-backward)
+
 ;;; * Integration Between Visual State and Lispy's Special Mark State
 ;; ** Using Both Separately
 (defun lispyville-normal-state ()
@@ -820,6 +866,10 @@ When THEME is not given, `lispville-key-theme' will be used instead."
              (lispyville--define-key states
                ">" #'lispyville-slurp
                "<" #'lispyville-barf))
+            ((eq type 'additional)
+             (lispyville--define-key states
+               (kbd "M-j") #'lispyville-drag-forward
+               (kbd "M-k") #'lispyville-drag-backward))
             ((eq type 'escape)
              (lispyville--define-key states
                (kbd "<escape>") #'lispyville-normal-state))

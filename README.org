@@ -80,7 +80,7 @@ The corresponding symbol is =additional-movement=. This key theme is the equival
 | =(=   | ~lispyville-backward-up-list~   |
 | =)=   | ~lispyville-up-list~            |
 
-~lispyvillle-left~ is an alias for ~lispyville-backward-up-list~, and ~lispyville-right~ is an alias for ~lispyville-up-list~.
+~lispyville-left~ is an alias for ~lispyville-backward-up-list~, and ~lispyville-right~ is an alias for ~lispyville-up-list~.
 
 ** Slurp/Barf Key Themes
 Two key themes are provided for slurping and barfing keybindings. Note that the commands in both key themes work with digit arguments. A positive argument will barf or slurp that many times like in cleverparens. Additionally, for the slurp commands, an argument of =-1= will slurp to the end of the line where the sexp after the closing paren ends, and an argument of =0= will slurp as far as possible. See the documentation for [[http://oremacs.com/lispy/#lispy-slurp][lispy-slurp]] for more information. Also see [[https://github.com/noctuid/lispyville#more-fluid-transitioning-between-normal-state-and-special][here]] for some extra information on automatically entering special after executing these commands.
@@ -102,6 +102,17 @@ The =slurp/barf-lispy= key theme provides commands that act the same as the defa
 | =<= | ~lispyville-barf~        |
 
 For both =<= bindings, if =lispyville-barf-stay-with-closing= is non-nil and barfing would move the closing delimiter behind the point, the point will instead be put on the closing delimiter.
+
+** Additional Key Theme
+The corresponding symbol is =additional=. This key theme is the equivalent of cleverparen's "additional bindings" keys. It is currently incomplete. =M-j= is comparable to ~evil-cp-drag-forward~ and ~lispy-move-down~. =M-k= is comparable to ~evil-cp-drag-backward~ and ~lispy-move-up~.
+
+| key   | command                    |
+|-------+----------------------------|
+| =M-j= | ~lispyville-drag-forward~  |
+| =M-k= | ~lispyville-drag-backward~ |
+
+~lispyville-move-down~ is an alias for ~lispyville-drag-forward~, and ~lispyville-move-up~ is an alias for ~lispyville-drag-backward~.
+
 ** Escape Key Theme
 The corresponding symbol is =escape=. See [[Using Both Separately][here]] for more information.
 

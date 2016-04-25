@@ -2,45 +2,53 @@
 (setq lispyville-key-theme '(operators
                              s-operators
                              additional-movement
-                             slurp/barf-cp))
+                             slurp/barf-cp
+                             additional))
 (lispyville-set-key-theme)
 
 (defmacro lispyville-with (in &rest body)
-  "This is `lispy-with' modified for lispyville."
+  "This is `lispy-with' modified for lispyville.
+Note that | is considered to be \"on\" a character, meaning that it is included
+in a visual selection. ~ on the other hand is not considered to be on a
+character, so when it represents the region end, the character after it is not
+considered as part of the region."
   (declare (indent 1))
   `(let ((temp-buffer (generate-new-buffer " *temp*")))
      (save-window-excursion
        (unwind-protect
-            (progn
-              (switch-to-buffer temp-buffer)
-              (emacs-lisp-mode)
-              (transient-mark-mode 1)
-              (evil-mode)
-              ;; (lispy-mode)
-              (lispyville-mode)
-              (insert ,in)
-              (goto-char (point-min))
-              (when (search-forward "~" nil t)
-                (backward-delete-char 1)
-                (set-mark (point)))
-              (goto-char (point-max))
-              (search-backward "|")
-              (delete-char 1)
-              (setq current-prefix-arg nil)
-              ,@(mapcar (lambda (x)
-                          (if (or (stringp x)
-                                  (and (listp x)
-                                       (eq (car x) 'kbd)))
-                              `(evil-execute-macro 1 ,x)
-                            x))
-                        body)
-              (insert "|")
-              (when (region-active-p)
-                (exchange-point-and-mark)
-                (insert "~"))
-              (buffer-substring-no-properties
-               (point-min)
-               (point-max)))
+           (progn
+             (switch-to-buffer temp-buffer)
+             (emacs-lisp-mode)
+             (transient-mark-mode 1)
+             (evil-mode)
+             ;; (lispy-mode)
+             (lispyville-mode)
+             (insert ,in)
+             (goto-char (point-min))
+             (when (search-forward "~" nil t)
+               (backward-delete-char 1)
+               (set-mark (point)))
+             (goto-char (point-max))
+             (search-backward "|")
+             (delete-char 1)
+             (setq current-prefix-arg nil)
+             ,@(mapcar (lambda (x)
+                         (if (or (stringp x)
+                                 (and (listp x)
+                                      (eq (car x) 'kbd)))
+                             `(evil-execute-macro 1 ,x)
+                           x))
+                       body)
+             (insert "|")
+             (when (region-active-p)
+               (exchange-point-and-mark)
+               ;; because not considering ~ as "on" like |
+               (when (= (point) (region-end))
+                 (forward-char))
+               (insert "~"))
+             (buffer-substring-no-properties
+              (point-min)
+              (point-max)))
          (and (buffer-name temp-buffer)
               (kill-buffer temp-buffer))))))
 
@@ -288,8 +296,8 @@
                    "(a |b c)"))
   (should (string= (lispyville-with "(a b c|)" "3H")
                    "(|a b c)"))
-  (should (string= (lispyville-with "(a b c~|)" "3H")
-                   "(|a b c~)"))
+  (should (string= (lispyville-with "(a b |c d~)" "2H")
+                   "(|a b c d~)"))
   (should (string= (lispyville-with "(a b (c e d)|)" "3H")
                    "(|a b (c e d))")))
 
@@ -491,3 +499,52 @@
     (should (string= (lispyville-with "((|a b) (c))" "<")
                      "((a)| b (c))")))
   (lispyville-set-key-theme))
+
+(ert-deftest lispyville-drag-forward ()
+  ;; region
+  (should (string= (lispyville-with "(~a |b c)" (kbd "M-j"))
+                   "(c ~a |b)"))
+  (should (string= (lispyville-with "(|a b~ c)" (kbd "M-j"))
+                   "(c |a b~)"))
+  ;; on a paren
+  (should (string= (lispyville-with "|(a) (b)" (kbd "M-j"))
+                   "(b) |(a)"))
+  (should (string= (lispyville-with "(a|) (b)" (kbd "M-j"))
+                   "(b) (a|)"))
+  (should (string= (lispyville-with "((a)|) (b)" (kbd "M-j"))
+                   "(b) ((a)|)"))
+  ;; atoms
+  (should (string= (lispyville-with "((|a b c) d)" (kbd "M-j"))
+                   "((b |a c) d)"))
+  (should (string= (lispyville-with "((a |b c) d)" (kbd "M-j"))
+                   "((a c |b) d)"))
+  ;; atom but can't move back further
+  ;; TODO for some reason tests put | one char back
+  ;; which doesn't happen when I run the test in emacs myself
+  ;; (should (string= (lispyville-with "((a b |c) d)" (kbd "M-j"))
+  ;;                  "(d (a b |c))"))
+  )
+
+(ert-deftest lispyville-drag-backward ()
+  ;; region
+  (should (string= (lispyville-with "(a ~b |c)" (kbd "M-k"))
+                   "(~b |c a)"))
+  (should (string= (lispyville-with "(a |b c~)" (kbd "M-k"))
+                   "(|b c~ a)"))
+  ;; on a paren
+  (should (string= (lispyville-with "(a) |(b)" (kbd "M-k"))
+                   "|(b) (a)"))
+  (should (string= (lispyville-with "(a) (b|)" (kbd "M-k"))
+                   "(b|) (a)"))
+  (should (string= (lispyville-with "(a) ((b)|)" (kbd "M-k"))
+                   "((b)|) (a)"))
+  ;; atoms
+  (should (string= (lispyville-with "(a (b c |d))" (kbd "M-k"))
+                   "(a (b |d c))"))
+  (should (string= (lispyville-with "(a (b |c d))" (kbd "M-k"))
+                   "(a (|c b d))"))
+  ;; atom but can't move back further
+  ;; same problem as above
+  ;; (should (string= (lispyville-with "(a (|b c d))" (kbd "M-k"))
+  ;;                  "((|b c d) a)"))
+  )
