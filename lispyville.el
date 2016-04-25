@@ -300,7 +300,10 @@ evil-cleverparens."
                                                   register yank-handler))
           ((eq type 'line)
            ;; don't include the newline at the end
-           (setq end (1- end))
+           (unless (save-excursion
+                     (goto-char end)
+                     (looking-at "\\'"))
+             (cl-decf end))
            (lispyville--safe-manipulate beg end nil t
                                         register 'lispyville--yank-line-handler))
           (t
@@ -348,7 +351,10 @@ This is not like the default `evil-yank-line'."
                                                   register yank-handler))
           ((eq type 'line)
            ;; don't include the newline at the end
-           (setq end (1- end))
+           (unless (save-excursion
+                     (goto-char end)
+                     (looking-at "\\'"))
+             (cl-decf end))
            (lispyville--safe-manipulate beg end t t
                                         register 'lispyville--yank-line-handler)
            (lispyville-first-non-blank)
@@ -411,7 +417,10 @@ This is not like the default `evil-yank-line'."
       (funcall delete-func beg end type register yank-handler))
     (cond
       ((eq type 'line)
-       (setq end (1- end))
+       (unless (save-excursion
+                 (goto-char end)
+                 (looking-at "\\'"))
+         (cl-decf end))
        (lispyville--safe-manipulate beg end t t
                                     register 'lispyville--yank-line-handler)
        (lispyville-first-non-blank)

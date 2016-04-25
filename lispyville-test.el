@@ -73,6 +73,11 @@
                      "2yy"
                      (lispyville-replace-with-last-kill))
                    "  (a b)\n  (c d)|"))
+  ;; test that works at end of buffer
+  (should (string= (lispyville-with "|(a b)"
+                     "yy"
+                     (lispyville-replace-with-last-kill))
+                   "(a b)|"))
   ;; test yank handler (pasting after linewise yank)
   (should (string= (lispyville-with "((\n  |(a b)))"
                      "yyp")
@@ -137,6 +142,9 @@
   (should (string= (lispyville-with "(\n  |(a b)\n  (c d))"
                      "2dd")
                    "(|)"))
+  ;; test that works at end of buffer
+  (should (string= (lispyville-with "|(a b)" "dd")
+                   "|"))
   ;; testing re-positioning
   (should (string= (lispyville-with "\"multi-line\n|string\""
                      "dd")
@@ -175,7 +183,10 @@
                    "((\n  |))"))
   (should (string= (lispyville-with "(\n  |(a b)\n  (c d))"
                      "2cc")
-                   "(\n |)")))
+                   "(\n |)"))
+  ;; test that works at end of buffer
+  (should (string= (lispyville-with "|(a b)" "cc")
+                   "|")))
 
 (ert-deftest lispyville-change-whole-line ()
   (should (string= (lispyville-with "((\n  |(a b)))"
