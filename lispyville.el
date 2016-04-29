@@ -88,6 +88,10 @@ mode."
           (const :tag "Same as 'insert." t)
           (const :tag "Don't enter special after applicable commands." nil)))
 
+(with-eval-after-load 'evil-surround
+  (add-to-list 'evil-surround-operator-alist '(lispyville-change . change))
+  (add-to-list 'evil-surround-operator-alist '(lispyville-delete . delete)))
+
 ;;;###autoload
 (define-minor-mode lispyville-mode
     "A minor mode for integrating evil with lispy."
