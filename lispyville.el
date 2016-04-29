@@ -4,7 +4,7 @@
 ;; URL: https://github.com/noctuid/lispyville
 ;; Created: March 03, 2016
 ;; Keywords: vim, evil, lispy, lisp, parentheses
-;; Package-Requires: ((lispy "0") (evil "0") (cl-lib "0.5"))
+;; Package-Requires: ((lispy "0") (evil "0") (cl-lib "0.5") (emacs "24.4"))
 ;; Version: 0.1
 
 ;; This file is not part of GNU Emacs.
