@@ -813,7 +813,8 @@ marking something using a command like `lispy-mark' from special."
 ;;; * Keybindings
 (defmacro lispyville--define-key (states &rest maps)
   "Helper function for defining keys in multiple STATES at once.
-MAPS are the keys and commands to define in lispyville-mode-map."
+MAPS are the keys and commands to define in lispyville-mode-map.
+Not meant to be used by the user."
   (declare (indent 1))
   (let ((state (cl-gensym "state")))
     `(if (listp ,states)
@@ -830,10 +831,10 @@ When THEME is not given, `lispville-key-theme' will be used instead."
     (let ((type (if (listp item)
                     (car item)
                   item))
-          (states (if (listp item)
-                      (cdr item)
-                    '(normal visual))))
+          (states (when (listp item)
+                    (cdr item))))
       (cond ((eq type 'operators)
+             (setq states (or states '(normal visual)))
              (lispyville--define-key states
                "y" #'lispyville-yank
                "d" #'lispyville-delete
@@ -844,10 +845,12 @@ When THEME is not given, `lispville-key-theme' will be used instead."
                "x" #'lispyville-delete-char-or-splice
                "X" #'lispyville-delete-char-or-splice-backwards))
             ((eq type 's-operators)
+             (setq states (or states '(normal visual)))
              (lispyville--define-key states
                "s" #'lispyville-substitute
                "S" #'lispyville-change-whole-line))
             ((eq type 'additional-movement)
+             (setq states (or states '(normal visual)))
              (lispyville--define-key states
                "H" #'lispyville-backward-sexp
                "L" #'lispyville-forward-sexp
@@ -863,21 +866,26 @@ When THEME is not given, `lispville-key-theme' will be used instead."
                "(" #'lispyville-backward-up-list
                ")" #'lispyville-up-list))
             ((eq type 'slurp/barf-cp)
+             (setq states (or states '(normal)))
              (lispyville--define-key states
                ">" #'lispyville->
                "<" #'lispyville-<))
             ((eq type 'slurp/barf-lispy)
+             (setq states (or states '(normal)))
              (lispyville--define-key states
                ">" #'lispyville-slurp
                "<" #'lispyville-barf))
             ((eq type 'additional)
+             (setq states (or states '(normal visual)))
              (lispyville--define-key states
                (kbd "M-j") #'lispyville-drag-forward
                (kbd "M-k") #'lispyville-drag-backward))
             ((eq type 'escape)
+             (setq states (or states '(insert emacs)))
              (lispyville--define-key states
                (kbd "<escape>") #'lispyville-normal-state))
             ((eq type 'mark)
+             (setq states (or states '(normal visual)))
              (lispyville--define-key states
                "v" #'lispy-mark-symbol
                "V" #'lispy-mark

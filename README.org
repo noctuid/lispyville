@@ -35,15 +35,20 @@ I've added this functionality directly to lispy, and if you want lispy's copy, d
 * Key Themes
 By default, the only keys that lispyville remaps are the operators. To allow for the user to choose between various sets of keybindings without making them manually remap every command, lispyville provides "key themes" similarly to how lispy does.
 
-The user can still define commands in =lispyville-mode= using ~evil-define-key~ or something like [[https://github.com/noctuid/general.el][general]], but ~lispyville-set-key-theme~ can also be used to define keys. It takes one argument which is a list of symbols corresponding to the different themes. By default, commands will be mapped in normal and visual state. To change this, a list of the symbol and the states to map the keys in can be used instead.
+The user can still define commands in =lispyville-mode= using ~evil-define-key~ or something like [[https://github.com/noctuid/general.el][general]], but ~lispyville-set-key-theme~ can also be used to define keys. It takes one argument which is a list of symbols corresponding to the different themes. By default, most commands will be mapped in normal and visual state. The default states are listed below. To change them, a list of the symbol and the states to map the keys in can be used instead.
 
-As an example, the following command will map the "operators" theme in normal and visual state and map the "escape" theme in insert state:
+As an example, the following command will map the "operators" theme in the normal and visual states, the "escape" theme in just the insert state, and the "additional-movement" theme in the normal, visual, and motion states:
 #+begin_src emacs-lisp
 (with-eval-after-load 'lispyville
-  (lispyville-set-key-theme '(operators (escape insert))))
+  (lispyville-set-key-theme '(operators
+                              (escape insert)
+                              (additional-movement normal visual motion))))
 #+end_src
+
+~lispyville-set-key-theme~ will not reset lispyville's keymap, so it will not remove user-defined keybindings (unless they are overwritten by a key in one of the themes). The keybindings will be added in the order of the list, so if there is overlap between the listed themes, the one listed last will take precedence.
+
 ** Operators Key Theme
-The corresponding symbol is =operators=. These are safe versions of the corresponding evil operators that won't unbalance parentheses. Like with cleverparens, =dd= will bring closing delimiters that are on a line by themselves to the previous line while =cc= won't. To disable this behavior, =lispyville-dd-stay-with-closing= can be set to a non-nil value.
+The corresponding symbol is =operators=. The default states are normal and visual. These are safe versions of the corresponding evil operators that won't unbalance parentheses. Like with cleverparens, =dd= will bring closing delimiters that are on a line by themselves to the previous line while =cc= won't. To disable this behavior, =lispyville-dd-stay-with-closing= can be set to a non-nil value.
 
 | key | command                                      |
 |-----+----------------------------------------------|
@@ -57,7 +62,7 @@ The corresponding symbol is =operators=. These are safe versions of the correspo
 | =X= | ~lispyville-delete-char-or-splice-backwards~ |
 
 ** S Operators Key Theme
-The corresponding symbol is =s-operators=. I've separated the s operators because I prefer to use =cl= and =cc= and bind the s keys to something else entirely.
+The corresponding symbol is =s-operators=. The default states are normal and visual. I've separated the s operators because I prefer to use =cl= and =cc= and bind the s keys to something else entirely.
 
 | key | command                        |
 |-----+--------------------------------|
@@ -65,7 +70,7 @@ The corresponding symbol is =s-operators=. I've separated the s operators becaus
 | =S= | ~lispyville-change-whole-line~ |
 
 ** Additional Movement Key Theme
-The corresponding symbol is =additional-movement=. This key theme is the equivalent of cleverparen's additional movement keys. =[= and =]= are like the reverse of ~lispy-flow~. ={= and =}= are like ~lispy-flow~. =(= and =)= are like ~lispy-left~ and ~lispy-right~. Also see [[https://github.com/noctuid/lispyville#more-fluid-transitioning-between-normal-state-and-special][here]] for some extra information on automatically enter special after executing these motions.
+The corresponding symbol is =additional-movement=. The default states are normal and visual. This key theme is the equivalent of cleverparen's additional movement keys. =[= and =]= are like the reverse of ~lispy-flow~. ={= and =}= are like ~lispy-flow~. =(= and =)= are like ~lispy-left~ and ~lispy-right~. Also see [[https://github.com/noctuid/lispyville#more-fluid-transitioning-between-normal-state-and-special][here]] for some extra information on automatically enter special after executing these motions.
 
 | key   | command                         |
 |-------+---------------------------------|
@@ -83,7 +88,7 @@ The corresponding symbol is =additional-movement=. This key theme is the equival
 ~lispyville-left~ is an alias for ~lispyville-backward-up-list~, and ~lispyville-right~ is an alias for ~lispyville-up-list~.
 
 ** Slurp/Barf Key Themes
-Two key themes are provided for slurping and barfing keybindings. Note that the commands in both key themes work with digit arguments. A positive argument will barf or slurp that many times like in cleverparens. Additionally, for the slurp commands, an argument of =-1= will slurp to the end of the line where the sexp after the closing paren ends, and an argument of =0= will slurp as far as possible. See the documentation for [[http://oremacs.com/lispy/#lispy-slurp][lispy-slurp]] for more information. Also see [[https://github.com/noctuid/lispyville#more-fluid-transitioning-between-normal-state-and-special][here]] for some extra information on automatically entering special after executing these commands.
+Two key themes are provided for slurping and barfing keybindings. The default state for both is normal. Note that the commands in both key themes work with digit arguments. A positive argument will barf or slurp that many times like in cleverparens. Additionally, for the slurp commands, an argument of =-1= will slurp to the end of the line where the sexp after the closing paren ends, and an argument of =0= will slurp as far as possible. See the documentation for [[http://oremacs.com/lispy/#lispy-slurp][lispy-slurp]] for more information. Also see [[https://github.com/noctuid/lispyville#more-fluid-transitioning-between-normal-state-and-special][here]] for some extra information on automatically entering special after executing these commands.
 
 Note that the commands for both key themes will act on the paren /after/ the point, meaning that the point should be before a closing paren to be considered "on" it.
 
@@ -104,7 +109,7 @@ The =slurp/barf-lispy= key theme provides commands that act the same as the defa
 For both =<= bindings, if =lispyville-barf-stay-with-closing= is non-nil and barfing would move the closing delimiter behind the point, the point will instead be put on the closing delimiter.
 
 ** Additional Key Theme
-The corresponding symbol is =additional=. This key theme is the equivalent of cleverparen's "additional bindings" keys. It is currently incomplete. =M-j= is comparable to ~evil-cp-drag-forward~ and ~lispy-move-down~. =M-k= is comparable to ~evil-cp-drag-backward~ and ~lispy-move-up~.
+The corresponding symbol is =additional=. The default states are normal and visual. This key theme is the equivalent of cleverparen's "additional bindings" keys. It is currently incomplete. =M-j= is comparable to ~evil-cp-drag-forward~ and ~lispy-move-down~. =M-k= is comparable to ~evil-cp-drag-backward~ and ~lispy-move-up~.
 
 | key   | command                    |
 |-------+----------------------------|
@@ -114,7 +119,7 @@ The corresponding symbol is =additional=. This key theme is the equivalent of cl
 ~lispyville-move-down~ is an alias for ~lispyville-drag-forward~, and ~lispyville-move-up~ is an alias for ~lispyville-drag-backward~.
 
 ** Escape Key Theme
-The corresponding symbol is =escape=. See [[Using Both Separately][here]] for more information.
+The corresponding symbol is =escape=. The default states are insert and emacs. See [[Using Both Separately][here]] for more information.
 
 | key   | command                   |
 |-------+---------------------------|
