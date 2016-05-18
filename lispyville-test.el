@@ -166,7 +166,10 @@ considered as part of the region."
                    "((|)\n ())"))
   (should (string= (lispyville-with "~(a b)\n(|c d)"
                      (kbd "C-v d"))
-                   "|( b)\n( d)")))
+                   "|( b)\n( d)"))
+  ;; test whether delimiters are pulled into comments
+  (should (string= (lispyville-with "(a\n ;; b\n |c)" "dd")
+                   "(a\n ;; b\n |)")))
 
 (ert-deftest lispyville-delete-line ()
   (should (string= (lispyville-with "(|a (b c) d)"

@@ -366,6 +366,7 @@ This is not like the default `evil-yank-line'."
                   ;; (lispy--reindent 1)
                   (when (save-excursion
                           (forward-line -1)
+                          (goto-char (line-end-position))
                           (not (lispy--in-comment-p)))
                     (forward-line -1)
                     (join-line 1)
