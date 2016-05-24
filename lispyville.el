@@ -381,9 +381,9 @@ This is not like the default `evil-yank-line'."
                       (forward-line 1))))
                  (t
                   (lispyville--join-line)))
-           (indent-for-tab-command)
            (unless lispyville-dd-stay-with-closing
-             (evil-first-non-blank)))
+             (evil-first-non-blank))
+           (lispy--indent-for-tab))
           (t
            (lispyville--safe-manipulate beg end t t register yank-handler)))))
 
@@ -434,7 +434,7 @@ This is not like the default `evil-yank-line'."
                                     register 'lispyville--yank-line-handler)
        (lispyville-first-non-blank)
        (evil-insert 1)
-       (indent-for-tab-command))
+       (lispy--indent-for-tab))
       ((eq type 'block)
        (evil-insert 1 nlines))
       (t
