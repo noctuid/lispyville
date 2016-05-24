@@ -341,6 +341,13 @@ This is not like the default `evil-yank-line'."
            (lispyville-yank beg (line-end-position)
                             type register yank-handler)))))
 
+(defun lispyville--join-line ()
+  "Like `join-line' but don't alter whitespace."
+  (save-excursion
+    (forward-line 1)
+    (when (eq (preceding-char) ?\n)
+      (delete-region (point) (1- (point))))))
+
 (evil-define-operator lispyville-delete (beg end type register yank-handler)
   "Like `evil-delete' but will not delete/copy unmatched delimiters."
   (interactive "<R><x><y>")
@@ -354,7 +361,7 @@ This is not like the default `evil-yank-line'."
            (lispyville--safe-manipulate-rectangle beg end t t
                                                   register yank-handler))
           ((eq type 'line)
-           ;; don't include the newline at the end
+           ;; don't include the newline at the end (deleted later)
            (unless (save-excursion
                      (goto-char end)
                      (looking-at "\\'"))
@@ -369,17 +376,14 @@ This is not like the default `evil-yank-line'."
                           (goto-char (line-end-position))
                           (not (lispy--in-comment-p)))
                     (forward-line -1)
-                    (join-line 1)
-                    (save-excursion
-                      (goto-char (line-end-position))
-                      (when (looking-back "\"")
-                        (backward-char)
-                        (delete-char -1)))
+                    (lispyville--join-line)
                     (unless lispyville-dd-stay-with-closing
                       (forward-line 1))))
                  (t
-                  (join-line 1)))
-           (indent-for-tab-command))
+                  (lispyville--join-line)))
+           (indent-for-tab-command)
+           (unless lispyville-dd-stay-with-closing
+             (evil-first-non-blank)))
           (t
            (lispyville--safe-manipulate beg end t t register yank-handler)))))
 

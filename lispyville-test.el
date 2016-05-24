@@ -145,18 +145,21 @@ considered as part of the region."
   ;; linewise
   (should (string= (lispyville-with "((\n  |(a b)))"
                      "dd")
-                   ;; TODO why does the point end up here in testing
-                   "(()|)"))
-  (should (string= (lispyville-with "(\n  |(a b)\n  (c d))"
+                   "|(())"))
+  (should (string= (lispyville-with "(\n |(a b)\n (c d))"
                      "2dd")
-                   "(|)"))
+                   "|()"))
   ;; test that works at end of buffer
   (should (string= (lispyville-with "|(a b)" "dd")
                    "|"))
+  (should (string= (lispyville-with "a\n|b" "dd")
+                   "|a"))
+  (should (string= (lispyville-with "(a\n|b)" "dd")
+                   "|(a)"))
   ;; testing re-positioning
   (should (string= (lispyville-with "\"multi-line\n|string\""
                      "dd")
-                   "\"multi-line|\""))
+                   "|\"multi-line\""))
   (should (string= (lispyville-with "(a\n |(b c)\n (d e))"
                      "dd")
                    "(a\n |(d e))"))
@@ -175,10 +178,10 @@ considered as part of the region."
   (should (string= (lispyville-with "(|a (b c) d)"
                      "D")
                    "(|)"))
-  ;; visual
+  ;; visual (act like dd)
   (should (string= (lispyville-with "((\n  ~|(a b)))"
                      "D")
-                   "(()|)"))
+                   "|(())"))
   ;; visual block
   (should (string= (lispyville-with "((~a b)\n (c d|))"
                      (kbd "C-v D"))
