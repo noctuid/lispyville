@@ -1,7 +1,7 @@
 * About LispyVille
 Welcome to LispyVille!
 
-=lispyville.el='s main purpose is to provide a lisp-editing environment suited towards evil users. It is mainly meant to be used in conjunction with lispy, but it also provides various "key themes" that allow for editing lisp in normal state and can be used without lispy-mode.
+=lispyville.el='s main purpose is to provide a lisp-editing environment suited towards evil users. It can serve as a minimal layer on top of =lispy-mode= for better integration with evil, but it does not require use of lispy's keybinding style. The provided commands allow for editing lisp in normal state and will work even without =lispy-mode= enabled.
 
 Here are the main features of lispyville:
 - Provides "safe" versions of vim's yank, delete, and change related operators that won't unbalance parentheses
@@ -13,9 +13,17 @@ Note that this package does not create any new evil states; it assumes that the 
 * Comparison With Evil Cleverparens
 =lispyville.el= has a similar intent to [[https://github.com/luxbock/evil-cleverparens][evil-cleverparens]] and related packages. It creates "safe" versions of standard evil editing commands. For example, it ensures that =dd= will not unbalance parenthesis but instead only delete the "safe" portion of the line. This allows the evil's line-oriented commands to become far more useful for lisps.
 
-The primary difference between lispyville and other similar packages is that it uses [[https://github.com/abo-abo/lispy][lispy]] instead of smartparens or paredit. This matters because lispyville is primarily intended to be used in conjunction with lispy. Lispy already has a lot in common with evil. Unlike smartparens and paredit, lispy's keybindings are just letters. It may help to think of lispy as just an additional evil state. The main difference is that you can automatically enter and exit it without having to use =ESC=.
+The primary difference between lispyville and other similar packages is that it uses [[https://github.com/abo-abo/lispy][lispy]] instead of smartparens or paredit. This matters because lispyville is primarily intended to be used in conjunction with lispy. Lispy already has a lot in common with evil. Unlike smartparens and paredit, lispy's primary keybindings are just letters. It may help to think of lispy as just an additional evil state. The main difference is that you can automatically enter and exit it without having to use =ESC=.
 
 However, if you'd rather stick to mainly vim keybindings, lispyville will also eventually provide "key themes" to replicate all of evil-cleveparens' keybindings as well as the keybindings of some other popular evil/lisp editing packages. I also plan to add key themes that are more similar to lispy's keybindings.
+
+* Relationship with Lispy
+While lispyville can be used without =lispy-mode=, some additional setup may be required to make editing lisp comfortable. For example, =(= would need to be explicitly bound to ~lispy-parens~ for auto-pairing behavior (and the other functionality provided by ~lispy-pair~). If your gripe with lispy is its style of having "special" locations where letter keys act as commands, you can still use =lispy-mode= for the "normal" keybindings it provides by not using =special= in your lispy "key theme":
+#+begin_src emacs-lisp
+(lispy-set-key-theme '(lispy c-digits))
+#+end_src
+
+You can always override these keybindings later.
 
 * Basic Configuration
 Lispyville is a minor mode. To enable it wherever lispy is enabled, you can add the following to your configuration:
