@@ -855,7 +855,7 @@ When THEME is not given, `lispville-key-theme' will be used instead."
                "s" #'lispyville-substitute
                "S" #'lispyville-change-whole-line))
             ((eq type 'additional-movement)
-             (setq states (or states '(normal visual)))
+             (setq states (or states '(motion)))
              (lispyville--define-key states
                "H" #'lispyville-backward-sexp
                "L" #'lispyville-forward-sexp
