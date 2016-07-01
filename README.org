@@ -78,7 +78,7 @@ The corresponding symbol is =s-operators=. The default states are normal and vis
 | =S= | ~lispyville-change-whole-line~ |
 
 ** Additional Movement Key Theme
-The corresponding symbol is =additional-movement=. The default states are normal and visual. This key theme is the equivalent of cleverparen's additional movement keys. =[= and =]= are like the reverse of ~lispy-flow~. ={= and =}= are like ~lispy-flow~. =(= and =)= are like ~lispy-left~ and ~lispy-right~. Also see [[https://github.com/noctuid/lispyville#more-fluid-transitioning-between-normal-state-and-special][here]] for some extra information on automatically enter special after executing these motions.
+The corresponding symbol is =additional-movement=. The default state is motion (inherited in the normal, visual, and operator states). This key theme is the equivalent of cleverparen's additional movement keys. =[= and =]= are like the reverse of ~lispy-flow~. ={= and =}= are like ~lispy-flow~. =(= and =)= are like ~lispy-left~ and ~lispy-right~. Also see [[https://github.com/noctuid/lispyville#more-fluid-transitioning-between-normal-state-and-special][here]] for some extra information on automatically enter special after executing these motions.
 
 | key   | command                         |
 |-------+---------------------------------|
