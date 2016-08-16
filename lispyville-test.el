@@ -200,7 +200,11 @@ considered as part of the region."
                    "(\n |)"))
   ;; test that works at end of buffer
   (should (string= (lispyville-with "|(a b)" "cc")
-                   "|")))
+                   "|"))
+  ;; test that undo is one step (evil-want-fine-undo nil)
+  (should (string= (lispyville-with "(defvar foo\n  bar baz)|"
+                     (concat "cchello" (kbd "ESC") "u"))
+                   "(defvar foo\n  bar baz)|")))
 
 (ert-deftest lispyville-change-whole-line ()
   (should (string= (lispyville-with "((\n  |(a b)))"

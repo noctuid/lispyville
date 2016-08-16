@@ -413,6 +413,19 @@ This is not like the default `evil-yank-line'."
            (lispyville-delete beg (line-end-position)
                               type register yank-handler)))))
 
+(defun lispyville--open-here (count)
+  "Like `evil-open-above' except inserts at the point."
+  (interactive "p")
+  (unless (eq evil-want-fine-undo t)
+    (evil-start-undo-step))
+  (push (point) buffer-undo-list)
+  (setq evil-insert-count count
+        evil-insert-lines t
+        evil-insert-vcount nil)
+  (evil-insert-state 1)
+  (when evil-auto-indent
+    (indent-according-to-mode)))
+
 (evil-define-operator lispyville-change
     (beg end type register yank-handler delete-func)
   "Like `evil-change' but will not delete/copy unmatched delimiters."
@@ -422,23 +435,24 @@ This is not like the default `evil-yank-line'."
         (opoint (save-excursion
                   (goto-char beg)
                   (line-beginning-position))))
+    (unless (eq evil-want-fine-undo t)
+      (evil-start-undo-step))
     (unless (eq type 'line)
       (funcall delete-func beg end type register yank-handler))
     (cond
-      ((eq type 'line)
-       (unless (save-excursion
-                 (goto-char end)
-                 (looking-at "\\'"))
-         (cl-decf end))
-       (lispyville--safe-manipulate beg end t t
-                                    register 'lispyville--yank-line-handler)
-       (lispyville-first-non-blank)
-       (evil-insert 1)
-       (lispy--indent-for-tab))
-      ((eq type 'block)
-       (evil-insert 1 nlines))
-      (t
-       (evil-insert 1)))))
+     ((eq type 'line)
+      (unless (save-excursion
+                (goto-char end)
+                (looking-at "\\'"))
+        (cl-decf end))
+      (lispyville--safe-manipulate beg end t t
+                                   register 'lispyville--yank-line-handler)
+      (lispyville-first-non-blank)
+      (lispyville--open-here 1))
+     ((eq type 'block)
+      (evil-insert 1 nlines))
+     (t
+      (evil-insert 1)))))
 
 (evil-define-operator lispyville-change-line
     (beg end type register yank-handler)
