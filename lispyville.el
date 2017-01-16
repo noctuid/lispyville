@@ -809,18 +809,18 @@ when the region is active instead of evil's visual states."
   (add-hook 'evil-visual-state-entry-hook #'evil-emacs-state nil t))
 
 ;; ** Using Just Visual State
+(defun lispyville--enter-visual ()
+  "Enter visual state if not already in visual state."
+  (unless (eq evil-state 'visual)
+    ;; prevents from entering insert after exiting visual
+    (evil-normal-state nil)
+    (evil-visual-state)))
+
 (defun lispyville-enter-visual-when-marking ()
   "Add a local hook to enter normal state whenever the mark is activated.
 This is potentially useful for those who want to enter visual state after
 marking something using a command like `lispy-mark' from special."
-  (add-hook 'activate-mark-hook
-            (defun lispyville--enter-visual ()
-              "Enter visual state if not already in visual state."
-              (unless (eq evil-state 'visual)
-                ;; prevents from entering insert after exiting visual
-                (evil-normal-state nil)
-                (evil-visual-state)))
-            nil t))
+  (add-hook 'activate-mark-hook #'lispyville--enter-visual nil t))
 
 ;; ** To Undo Changes After Testing
 (defun lispyville-remove-marking-hooks ()
