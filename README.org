@@ -156,7 +156,7 @@ There is also an option for commands called =lispyville-commands-put-into-specia
 Lispyville tries to be unobtrusive by default, only rebinding the major operator keys. Since there are many potential ways to better integrate evil's visual state with lispy's special (with the region active), lispyville doesn't make a default choice for the user.
 
 *** Using Both Separately
-This is probably the simplest method of improving things. By default, pressing escape after using something like ~lispy-mark~ from special will enter visual state, requiring another press of escape to get to normal state. Lispyville provides ~lispyville-normal-state~ to do this in one step. You can map it manually or use the =escape= key theme (e.g. ~(lispyville-set-key-theme '(... (escape insert emacs)))~).
+This is probably the simplest method of improving things. By default, pressing escape after using something like ~lispy-mark~ from special will enter normal state but won't cancel the region. Lispyville provides ~lispyville-normal-state~ to deactivate the region and enter normal state in one step. You can map it manually or use the =escape= key theme (e.g. ~(lispyville-set-key-theme '(... (escape insert emacs)))~).
 
 On the other hand, if you want to map a key in normal state to mark something with a lispy command like ~lispy-mark~, normally evil's visual state will be entered. If you would rather use lispy's keys after calling specific (but not all) mark commands, you can use ~lispyville-wrap-command~ to create a function that will call a command and then enter a state.
 
