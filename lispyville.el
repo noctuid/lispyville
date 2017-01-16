@@ -44,14 +44,33 @@ at all and simply use `lispyville-set-key-theme' with an argument after
 lispyville has been loaded."
   :group 'lispyville
   :type '(repeat :tag "Key Themes"
-          (choice
-           (const :tag "Remap the operator keys to their safe versions."
-            operators)
-           (const :tag "Remap the s and S operator keys to their safe version."
-            s-operators)
-           (const
-            :tag "Extra motions similar to those given by evil-cleverparens."
-            additional-movement))))
+           (choice
+            (const :tag "Safe versions of evil operators."
+              operators)
+            (const :tag "Safe versions of the s and S operators."
+              s-operators)
+            (const
+             :tag "Extra motions similar to those given by cleverparens."
+              additional-movement)
+            (const
+             :tag "Slurp/barf keybindings in the style of cleverparens."
+              slurp/barf-cp)
+            (const
+             :tag "Slurp/barf keybindings in the style of lispy."
+              slurp/barf-lispy)
+            (const
+             :tag "Extra commands similar to those given by cleverparens."
+              additional)
+            (const
+             :tag "Command to enter normal state and cancel an active region."
+              escape)
+            (const
+             :tag "Lispy commands for marking."
+              mark)
+            (const
+             :tag "Commands for toggling between special and visual state and
+canceling a region."
+              mark-toggle))))
 
 (defcustom lispyville-dd-stay-with-closing nil
   "When non-nil, dd (`lispyville-delete') will move the point up a line.
@@ -68,25 +87,26 @@ only has an effect if `lispyville-commands-put-into-special' is nil."
   :group 'lispyville
   :type 'boolean)
 
+(defcustom lispyville-preferred-lispy-state 'insert
+  "The preferred evil state for using lispy.
+This is used by any command that should enter special to determine the correct
+state."
+  :group 'lispyville
+  :type '(choice
+          (const :tag "Use insert state to get into special." insert)
+          (const :tag "Use emacs state to get into special." emacs)))
+
 (defcustom lispyville-motions-put-into-special nil
   "Applicable motions will enter insert or emacs state.
 This will only happen when they are not called with an operator or in visual
 mode."
   :group 'lispyville
-  :type '(choice
-          (const :tag "Enter emacs state to get into special." emacs)
-          (const :tag "Enter insert state to get into special." insert)
-          (const :tag "Same as 'insert." t)
-          (const :tag "Don't enter special after applicable motions." nil)))
+  :type 'boolean)
 
 (defcustom lispyville-commands-put-into-special nil
   "Applicable commands will enter insert or emacs state."
   :group 'lispyville
-  :type '(choice
-          (const :tag "Enter emacs state to get into special." emacs)
-          (const :tag "Enter insert state to get into special." insert)
-          (const :tag "Same as 'insert." t)
-          (const :tag "Don't enter special after applicable commands." nil)))
+  :type 'boolean)
 
 (with-eval-after-load 'evil-surround
   (add-to-list 'evil-surround-operator-alist '(lispyville-change . change))
@@ -514,40 +534,38 @@ This is not like the default `evil-yank-line'."
   "This is an evil motion equivalent of `backward-sexp'."
   (backward-sexp (or count 1)))
 
-(defun lispyville--maybe-insert-into-special (&optional command)
+(defun lispyville--maybe-enter-special (&optional command)
   "Potentially enter insert or emacs state to get into special.
-The behavior depends on the value of `lispyville-motions-put-into-special'.
-When at a closing paren, move right before inserting. Otherwise, if not at
-an opening paren or after a closing paren, call `lispy-right' to get to special.
-If COMMAND is non-nil, depend on the value of
-`lispyville-commands-put-into-special' instead."
-  (let ((state (if command
-                   lispyville-commands-put-into-special
-                 lispyville-motions-put-into-special)))
-    (when (and state
-               (not (or (evil-operator-state-p)
-                        (evil-visual-state-p))))
-      (cond ((looking-at lispy-right)
-             (forward-char))
-            ((not (or (looking-at lispy-left)
-                      (looking-back lispy-right (1- (point)))))
-             (lispy-right 1)))
-      (if (eq state 'emacs)
-          (evil-emacs-state)
-        (evil-insert-state)))))
+The behavior depends on the value of `lispyville-motions-put-into-special'. When
+at a closing paren, move right before inserting. Otherwise, if not at an opening
+paren or after a closing paren, call `lispy-right' to get to special. If COMMAND
+is non-nil, depend on the value of `lispyville-commands-put-into-special'
+instead. `lispyville-preferred-lispy-state' is used to determine whether to
+enter emacs or insert state."
+  (when (and (if command
+                 lispyville-commands-put-into-special
+               lispyville-motions-put-into-special)
+             (not (or (evil-operator-state-p)
+                      (evil-visual-state-p))))
+    (cond ((looking-at lispy-right)
+           (forward-char))
+          ((not (or (looking-at lispy-left)
+                    (looking-back lispy-right (1- (point)))))
+           (lispy-right 1)))
+    (evil-change-state lispyville-preferred-lispy-state)))
 
 (evil-define-motion lispyville-beginning-of-defun (count)
   "This is the evil motion equivalent of `beginning-of-defun'.
 This won't jump to the beginning of the buffer if there is no paren there."
   (beginning-of-defun (or count 1))
-  (lispyville--maybe-insert-into-special))
+  (lispyville--maybe-enter-special))
 
 (evil-define-motion lispyville-end-of-defun (count)
   "This is the evil motion equivalent of `end-of-defun'.
 This won't jump to the end of the buffer if there is no paren there."
   (end-of-defun (or count 1))
   (re-search-backward lispy-right nil t)
-  (lispyville--maybe-insert-into-special))
+  (lispyville--maybe-enter-special))
 
 ;; lispy-flow like (and reverse)
 (defun lispyville--move-to-delimiter (count &optional type)
@@ -586,32 +604,32 @@ Move backwards when COUNT is negative. Unlike `evil-cp-next-closing', this won't
   "Move to the next opening delimiter COUNT times."
   (lispyville--move-to-delimiter (or count 1) 'left)
   (unless (looking-at "\"")
-    (lispyville--maybe-insert-into-special)))
+    (lispyville--maybe-enter-special)))
 
 (evil-define-motion lispyville-previous-opening (count)
   "Move to the previous opening delimiter COUNT times."
   (lispyville--move-to-delimiter (- (or count 1)) 'left)
   (unless (looking-at "\"")
-    (lispyville--maybe-insert-into-special)))
+    (lispyville--maybe-enter-special)))
 
 (evil-define-motion lispyville-next-closing (count)
   "Move to the next closing delimiter COUNT times."
   (lispyville--move-to-delimiter (or count 1))
   (unless (looking-at "\"")
-    (lispyville--maybe-insert-into-special)))
+    (lispyville--maybe-enter-special)))
 
 (evil-define-motion lispyville-previous-closing (count)
   "Move to the previous closing delimiter COUNT times."
   (lispyville--move-to-delimiter (- (or count 1)))
   (unless (looking-at "\"")
-    (lispyville--maybe-insert-into-special)))
+    (lispyville--maybe-enter-special)))
 
 (evil-define-motion lispyville-backward-up-list (count)
   "This is the evil motion equivalent of `lispy-left' (or `backward-up-list').
 This is comparable to `evil-cp-backward-up-sexp'. It does not have lispy's
 behavior on outlines."
   (lispy-left (or count 1))
-  (lispyville--maybe-insert-into-special))
+  (lispyville--maybe-enter-special))
 
 (defalias 'lispyville-left 'lispyville-backward-up-list)
 
@@ -622,7 +640,7 @@ on outlines. Unlike `up-list', it will keep the point on the closing delimiter."
   (forward-char)
   (lispy-right (or count 1))
   (backward-char)
-  (lispyville--maybe-insert-into-special))
+  (lispyville--maybe-enter-special))
 
 (defalias 'lispyville-right 'lispyville-up-list)
 
@@ -656,7 +674,7 @@ lispyville equivalent of `evil-cp->' and `lispy-slurp-or-barf-right'."
          (save-excursion
            (lispy-right 1)
            (lispy-slurp count))))
-  (lispyville--maybe-insert-into-special t))
+  (lispyville--maybe-enter-special t))
 
 (evil-define-command lispyville-< (count)
   "Slurp or barf COUNT times.
@@ -683,7 +701,7 @@ the lispyville equivalent of `evil-cp-<' and `lispy-slurp-or-barf-left'."
                  ((and lispyville-barf-stay-with-closing
                        (< saved-pos (point)))
                   (goto-char (1- saved-pos)))))))
-  (lispyville--maybe-insert-into-special t))
+  (lispyville--maybe-enter-special t))
 
 (evil-define-command lispyville-slurp (count)
   "Slurp COUNT times.
@@ -702,7 +720,7 @@ lispyville equivalent of `lispy-slurp'."
          (save-excursion
            (lispy-right 1)
            (lispy-slurp count))))
-  (lispyville--maybe-insert-into-special t))
+  (lispyville--maybe-enter-special t))
 
 (evil-define-command lispyville-barf (count)
   "Barf COUNT times.
@@ -728,7 +746,7 @@ lispyville equivalent of `lispy-barf'."
                  ((and lispyville-barf-stay-with-closing
                        (< saved-pos (point)))
                   (goto-char (1- saved-pos)))))))
-  (lispyville--maybe-insert-into-special t))
+  (lispyville--maybe-enter-special t))
 
 ;; ** Additional Commands Key Theme
 (defun lispyville--drag (func count)
@@ -788,46 +806,83 @@ instead of entering visual state like `evil-normal-state' would."
 
 (defmacro lispyville-wrap-command (command state)
   "Return a function that executes COMMAND and then enters STATE."
-  `(defun ,(intern (concat "lispyville-wrap-" (symbol-name command))) ()
-     ,(concat "Call `" (symbol-name command) "' and then enter "
-              (symbol-name state) " state.")
-     (interactive)
-     (call-interactively #',command)
-     (evil-change-state ',state)))
+  (let ((name (intern (concat "lispyville-wrap-" (symbol-name command)))))
+    `(progn
+       (defun ,name ()
+         ,(concat "Call `" (symbol-name command) "' and then enter "
+                  (symbol-name state) " state.")
+         (interactive)
+         (call-interactively #',command)
+         (evil-change-state ',state))
+       #',name)))
 
-;; ** Using Just Lispy's Mark Keys
-(defun lispyville-enter-insert-when-marking ()
-  "Add a local hook to enter insert state when entering visual state.
+(defun lispyville-toggle-mark-type (arg)
+  "Switch between evil visual state and lispy special with an active region.
+`lispyville-preferred-lispy-state' is used to determine the state to switch to
+from visual state. ARG is passed to `lispyville-mark-list' when this command is
+run in lispy special without an active region or when it is not the default 1."
+  (interactive "p")
+  (if (region-active-p)
+      (cond ((evil-visual-state-p)
+             (evil-change-state lispyville-preferred-lispy-state))
+            ((memq evil-state '(insert emacs))
+             (cond ((= arg 1)
+                    (setq lispyville--inhibit-next-special-force t)
+                    (evil-normal-state nil)
+                    (evil-visual-state nil))
+                   (t
+                    (lispy-mark-list arg)))))
+    (lispy-mark-list arg)))
+
+(defun lispyville-escape (arg)
+  "Cancel the active region.
+If in lispy special with an active region, call `lispy-mark-list' with ARG.
+Otherwise enter evil normal state."
+  (interactive "p")
+  (if (region-active-p)
+      (lispy-mark-list arg)
+    (evil-normal-state)))
+
+;; ** Using Just Lispy Special
+(defvar lispyville--inhibit-next-special-force nil)
+
+(defun lispyville--enter-special ()
+  "Enter insert or emacs state based on `lispyville-preferred-lispy-state'."
+  (when lispyville-mode
+    (if lispyville--inhibit-next-special-force
+        (setq lispyville--inhibit-next-special-force nil)
+      (evil-change-state lispyville-preferred-lispy-state))))
+
+(defun lispyville-enter-special-when-marking ()
+  "Add a hook to enter insert or emacs state after entering visual state.
 This is potentially useful for those who want to always use lispy's commands
 when the region is active instead of evil's visual states."
-  (add-hook 'evil-visual-state-entry-hook #'evil-insert-state nil t))
-
-(defun lispyville-enter-emacs-when-marking ()
-  "Add a local hook to enter emacs state when entering visual state.
-This is potentially useful for those who want to always use lispy's commands
-when the region is active instead of evil's visual states."
-  (add-hook 'evil-visual-state-entry-hook #'evil-emacs-state nil t))
+  (add-hook 'evil-visual-state-entry-hook #'lispyville--enter-special))
 
 ;; ** Using Just Visual State
 (defun lispyville--enter-visual ()
   "Enter visual state if not already in visual state."
-  (unless (eq evil-state 'visual)
+  (unless (or (not lispyville-mode)
+              (eq evil-state 'visual))
     ;; prevents from entering insert after exiting visual
     (evil-normal-state nil)
-    (evil-visual-state)))
+    (evil-visual-state)
+    ;; FIXME
+    (when (= (point) (region-end))
+      (backward-char))))
 
 (defun lispyville-enter-visual-when-marking ()
   "Add a local hook to enter normal state whenever the mark is activated.
 This is potentially useful for those who want to enter visual state after
 marking something using a command like `lispy-mark' from special."
-  (add-hook 'activate-mark-hook #'lispyville--enter-visual nil t))
+  (add-hook 'activate-mark-hook #'lispyville--enter-visual))
 
 ;; ** To Undo Changes After Testing
 (defun lispyville-remove-marking-hooks ()
   "Remove lispyville marking related hooks."
-  (remove-hook 'evil-visual-state-entry-hook #'evil-insert-state t)
-  (remove-hook 'evil-visual-state-entry-hook #'evil-emacs-state t)
-  (remove-hook 'activate-mark-hook #'evil-visual-state t))
+  (interactive)
+  (remove-hook 'evil-visual-state-entry-hook #'lispyville--enter-special)
+  (remove-hook 'activate-mark-hook #'lispyville--enter-visual))
 
 ;;; * Keybindings
 (defmacro lispyville--define-key (states &rest maps)
@@ -908,7 +963,13 @@ When THEME is not given, `lispville-key-theme' will be used instead."
              (lispyville--define-key states
                "v" #'lispy-mark-symbol
                "V" #'lispy-mark
-               (kbd "C-v") #'lispy-mark))))))
+               (kbd "C-v") #'lispy-mark))
+            ((eq type 'mark-toggle)
+             (setq states (or states '(insert emacs)))
+             (lispyville--define-key '(visual)
+               "v" #'lispyville-toggle-mark-type)
+             (lispyville--define-key states
+               (kbd "<escape>") #'lispyville-escape))))))
 
 (lispyville-set-key-theme)
 
