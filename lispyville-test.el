@@ -3,15 +3,16 @@
                              s-operators
                              additional-movement
                              slurp/barf-cp
-                             additional))
+                             additional
+                             mark-toggle))
 (lispyville-set-key-theme)
 
 (defmacro lispyville-with (in &rest body)
   "This is `lispy-with' modified for lispyville.
-Note that | is considered to be \"on\" a character, meaning that it is included
-in a visual selection. ~ on the other hand is not considered to be on a
-character, so when it represents the region end, the character after it is not
-considered as part of the region."
+Note that | is considered to be \"on\" a character in normal/visual state,
+meaning that it is included in a visual selection. ~ on the other hand is not
+considered to be on a character, so when it represents the region end, the
+character after it is not considered as part of the region."
   (declare (indent 1))
   `(let ((temp-buffer (generate-new-buffer " *temp*")))
      (save-window-excursion
@@ -43,7 +44,8 @@ considered as part of the region."
              (when (region-active-p)
                (exchange-point-and-mark)
                ;; because not considering ~ as "on" like |
-               (when (= (point) (region-end))
+               (when (and (evil-visual-state-p)
+                          (= (point) (region-end)))
                  (forward-char))
                (insert "~"))
              (buffer-substring-no-properties
@@ -558,3 +560,53 @@ considered as part of the region."
   ;; (should (string= (lispyville-with "(a (|b c d))" (kbd "M-k"))
   ;;                  "((|b c d) a)"))
   )
+
+;;; * Visual and Special Mark Integration
+(ert-deftest lispyville-toggle-mark-type ()
+  (lispy-define-key lispy-mode-map "m" #'lispyville-toggle-mark-type)
+  ;; test that it behaves as `lispy-mark-list' without region
+  (should (string= (lispyville-with "|(a b c) d" "im")
+                   "~(a b c)| d"))
+  (should (string= (lispyville-with "|(a b c) d" "i2m")
+                   "(a ~b| c) d"))
+  (should (string= (lispyville-with "|(a b c) d" "i2m")
+                   "(a ~b| c) d"))
+  ;; test that it behaves as `lispy-mark-list' with a count
+  (should (string= (lispyville-with "|(a b c) d" "im2m")
+                   "(a ~b| c) d"))
+  ;; test toggling in special with region
+  (should (string= (lispyville-with "|(a b c) d" "imm")
+                   "~(a b c|) d"))
+  (should (string= (lispyville-with "|(a b c) d" "i2mm")
+                   "(a ~|b c) d"))
+  (should (string= (lispyville-with "|(a b c) d" "imdm")
+                   "|(a b c)~ d"))
+  (should (string= (lispyville-with "|(a baz c) d" "i2mdm")
+                   "(a |baz~ c) d"))
+  ;; test toggling in visual state
+  (should (string= (lispyville-with "~(a b c|) d" "v")
+                   "~(a b c)| d"))
+  (should (string= (lispyville-with "(a ~|b c) d" "v")
+                   "(a ~b| c) d"))
+  (should (string= (lispyville-with "|(a b c)~ d" "v")
+                   "|(a b c)~ d"))
+  (should (string= (lispyville-with "(a |baz~ c) d" "v")
+                   "(a |baz~ c) d")))
+
+(ert-deftest lispyville-escape ()
+  (should (string= (lispyville-with "|(a b c) d" (kbd "i m ESC"))
+                   "(a b c)| d"))
+  (should (string= (lispyville-with "|(a b c) d" (kbd "i m 2 ESC"))
+                   "(a ~b| c) d")))
+
+(ert-deftest lispyville-always-visual ()
+  (lispyville-enter-visual-when-marking)
+  (should (string= (lispyville-with "|(a b c) d" "im")
+                   "~(a b c|) d"))
+  (lispyville-remove-marking-hooks))
+
+(ert-deftest lispyville-always-special ()
+  (lispyville-enter-special-when-marking)
+  (should (string= (lispyville-with "|(a b c) d" (lispy-mark-list 1))
+                   "~(a b c)| d"))
+  (lispyville-remove-marking-hooks))
