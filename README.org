@@ -32,13 +32,13 @@ Lispyville is a minor mode. To enable it wherever lispy is enabled, you can add 
 (add-hook 'lispy-mode-hook #'lispyville-mode)
 #+end_src
 * Safe Operators
-The operators behave similarly to evil-cleverparens' operators with a few exceptions. The delete operator will always act safely by ignoring unmatched delimiters, whereas cleverparens will sometimes splice. While cleverparens' yank operators will attempt to add unmatched delimiters, lispyville's yank operators will simply exclude the unmatched delimiters, which is consistent with how the delete operator works. The operators will also work in visual block mode, unlike with cleverparens. The user can also choose whether or not they want to act safely on delimiters in strings and comments (see [[Lispy Settings]]).
+The operators behave similarly to evil-cleverparens' operators with a few exceptions. The delete operator will always act safely by ignoring unmatched delimiters, whereas cleverparens will sometimes splice. While cleverparens' yank operators will attempt to add unmatched delimiters, lispyville's yank operators will simply exclude the unmatched delimiters, which is consistent with how the delete operator works. The operators will also work in visual block mode, unlike with cleverparens. The user can also choose whether or not they want to act safely on delimiters in strings and comments (see [[#lispy-settings][Lispy Settings]]).
 
 =Y= acts like a safe =y$= unlike in evil and cleverparens. If anyone takes issue with this change, I can add a command for its regular functionality, but I think most people dislike the default inconsistency between =Y= and =D= in vim.
 
 Additionally, I think that the function used for safe behavior is a lot more sanely implemented in lispyville than in other related packages (it intelligently analyzes a region once instead of repeatedly calling ~check-parens~).
 
-I've added this functionality directly to lispy, and if you want lispy's copy, delete, and/or paste commands to keep parentheses balanced, you can set the relevant options for lispy (see [[Lispy Settings]]).
+I've added this functionality directly to lispy, and if you want lispy's copy, delete, and/or paste commands to keep parentheses balanced, you can set the relevant options for lispy (see [[#lispy-settings][Lispy Settings]]).
 
 * Key Themes
 By default, the only keys that lispyville remaps are the operators. To allow for the user to choose between various sets of keybindings without making them manually remap every command, lispyville provides "key themes" similarly to how lispy does.
@@ -127,14 +127,14 @@ The corresponding symbol is =additional=. The default states are normal and visu
 ~lispyville-move-down~ is an alias for ~lispyville-drag-forward~, and ~lispyville-move-up~ is an alias for ~lispyville-drag-backward~.
 
 ** Escape Key Theme
-The corresponding symbol is =escape=. The default states are insert and emacs. See [[Using Both Separately][here]] for more information.
+The corresponding symbol is =escape=. The default states are insert and emacs. See [[#using-both-separately][here]] for more information.
 
 | key   | command                   |
 |-------+---------------------------|
 | =ESC= | ~lispyville-normal-state~ |
 
 ** Mark Key Theme
-The corresponding symbol is =mark=. See [[Using Only Lispy's Mark Commands][here]] for more information.
+The corresponding symbol is =mark=. The default states are normal and visual. See [[#using-only-lispys-mark-commands][here]] for more information.
 
 | key   | command             |
 |-------+---------------------|
@@ -177,6 +177,10 @@ There is also an option for commands called =lispyville-commands-put-into-specia
 Lispyville tries to be unobtrusive by default, only rebinding the major operator keys. Since there are many potential ways to better integrate evil's visual state with lispy's special (with the region active), lispyville doesn't make a default choice for the user.
 
 *** Using Both Separately
+:PROPERTIES:
+:CUSTOM_ID: using-both-separately
+:END:
+
 This is probably the simplest method of improving things. By default, pressing escape after using something like ~lispy-mark~ from special will enter normal state but won't cancel the region. Lispyville provides ~lispyville-normal-state~ to deactivate the region and enter normal state in one step. You can map it manually or use the =escape= key theme (e.g. ~(lispyville-set-key-theme '(... (escape insert emacs)))~).
 
 On the other hand, if you want to map a key in normal state to mark something with a lispy command like ~lispy-mark~, normally evil's visual state will be entered. If you would rather use lispy's keys after calling specific (but not all) mark commands, you can use ~lispyville-wrap-command~ to create a function that will call a command and then enter a state.
@@ -193,6 +197,10 @@ To toggle between special and visual state at any time, you can use the =mark-to
 See the next section if you would prefer that lispy's mark commands always enter insert or emacs state.
 
 *** Using Only Lispy's Mark Commands
+:PROPERTIES:
+:CUSTOM_ID: using-only-lispys-mark-commands
+:END:
+
 Lispy's special mark state won't work correctly when entered with an active region it wouldn't normally mark (e.g. half of a symbol is marked). Because of this, you'll probably want to rebind =v=, =V=, and =C-v=. Lispyville provides a key theme to remap =v= to ~lispy-mark-symbol~ and =V= and =C-v= to ~lispy-mark~ (e.g. ~(lispyville-set-key-theme '(... (mark normal)))~).
 
 To always use lispy's keys, the following can be added to the user's configuration after lispyville loads. It will cause insert or emacs state (based on =lispyville-preferred-lispy-state=) to be entered instead of visual state for commands that would enter visual state.
@@ -213,11 +221,15 @@ The behavior can be removed in the same way (by using ~lispyville-remove-marking
 *** Final Notes
 If you prefer evil or lispy for working with regions but don't want to use either all of the time, it's probably best to pick the one you find the most useful and bind some keys from the other in the relevant keymap.
 
-I may add a key theme for this, but I personally prefer to mainly using lispy's keys, as they are generally more useful than the default evil motions and will keep the region balanced. Evil's commands can be more useful for editing comments, so I'm personally using the first solution ([[Using Both Separately]]) to choose which to use.
+I may add a key theme for this, but I personally prefer to mainly using lispy's keys, as they are generally more useful than the default evil motions and will keep the region balanced. Evil's commands can be more useful for editing comments, so I'm personally using the first solution ([[#using-both-separately][Using Both Separately]]) to choose which to use.
 
 Note that you can still use the =mark-toggle= keybinding to switch between visual and special even if you run ~(lispyville-enter-special-when-marking)~ or ~(lispyville-enter-visual-when-marking)~.
 
 * Lispy Settings
+:PROPERTIES:
+:CUSTOM_ID: lispy-settings
+:END:
+
 I've added the main functions behind safe deletion and copying directly to lispy. To have lispy's commands always act safely on a region, =lispy-safe-delete= and =lispy-safe-copy= can be set to non-nil values. Lispyville's functions keep delimiters balanced regardless of these settings.
 
 The options that /will/ affect lispyville's behavior are =lispy-safe-threshold=, =lispy-safe-actions-ignore-strings=, and =lispy-safe-actions-ignore-comments=. =lispy-safe-threshold= is the maximum size a region can be before operators will not try to keep delimiters balanced. The other two options will determine whether operators will attempt to keep delimiters balanced in strings and comments.
