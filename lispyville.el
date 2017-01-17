@@ -829,7 +829,9 @@ run in lispy special without an active region or when it is not the default 1."
              (cond ((= arg 1)
                     (setq lispyville--inhibit-next-special-force t)
                     (evil-normal-state nil)
-                    (evil-visual-state nil))
+                    (evil-visual-state nil)
+                    (when (= (point) (region-end))
+                      (backward-char)))
                    (t
                     (lispy-mark-list arg)))))
     (lispy-mark-list arg)))
