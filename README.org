@@ -134,13 +134,13 @@ The corresponding symbol is =escape=. The default states are insert and emacs. S
 | =ESC= | ~lispyville-normal-state~ |
 
 ** Mark Key Theme
-The corresponding symbol is =mark=. The default states are normal and visual. See [[#using-only-lispys-mark-commands][here]] for more information.
+The corresponding symbol is =mark=. The default states are normal and visual. See [[#using-only-lispys-mark-commands][here]] for more information. Note that this key theme can be used even if you don't plan to use ~(lispyville-enter-special-when-marking)~ in your configuration.
 
-| key   | command             |
-|-------+---------------------|
-| =v=   | ~lispy-mark-symbol~ |
-| =V=   | ~lispy-mark~        |
-| =C-v= | ~lispy-mark~        |
+| key   | command                              |
+|-------+--------------------------------------|
+| =v=   | ~lispyville-wrap-mark-symbol-visual~ |
+| =V=   | ~lispyville-wrap-mark-visual~        |
+| =C-v= | ~lispyville-wrap-mark-visual~        |
 
 ** Mark Toggle Key Theme
 The corresponding symbol is =mark-toggle=. The default states are insert and emacs. Note that =v= will be bound in visual state (not changeable).
@@ -201,7 +201,7 @@ See the next section if you would prefer that lispy's mark commands always enter
 :CUSTOM_ID: using-only-lispys-mark-commands
 :END:
 
-Lispy's special mark state won't work correctly when entered with an active region it wouldn't normally mark (e.g. half of a symbol is marked). Because of this, you'll probably want to rebind =v=, =V=, and =C-v=. Lispyville provides a key theme to remap =v= to ~lispy-mark-symbol~ and =V= and =C-v= to ~lispy-mark~ (e.g. ~(lispyville-set-key-theme '(... (mark normal)))~).
+Lispy's special mark state won't work correctly when entered with an active region it wouldn't normally mark (e.g. half of a symbol is marked). Because of this, you'll probably want to rebind =v=, =V=, and =C-v=. Lispyville provides a key theme to remap =v= to a wrapped version of ~lispy-mark-symbol~ and =V= and =C-v= to a wrapped version of ~lispy-mark~ (e.g. ~(lispyville-set-key-theme '(... (mark normal)))~).
 
 To always use lispy's keys, the following can be added to the user's configuration after lispyville loads. It will cause insert or emacs state (based on =lispyville-preferred-lispy-state=) to be entered instead of visual state for commands that would enter visual state.
 #+begin_src emacs-lisp

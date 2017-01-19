@@ -610,3 +610,16 @@ character after it is not considered as part of the region."
   (should (string= (lispyville-with "|(a b c) d" (lispy-mark-list 1))
                    "~(a b c)| d"))
   (lispyville-remove-marking-hooks))
+
+;; test wrapping
+(ert-deftest lispyville-wrap-lispy-mark-symbol ()
+  (lispyville--define-key '(normal visual) "v"
+                          (lispyville-wrap-command lispy-mark-symbol visual))
+  (should (string= (lispyville-with "(|foo bar) baz qux" "v")
+                   "(~fo|o bar) baz qux"))
+  (should (string= (lispyville-with "(~fo|o bar) baz qux" "v")
+                   "(~foo ba|r) baz qux"))
+  (should (string= (lispyville-with "(~foo ba|r) baz qux" "v")
+                   "(foo bar) ~ba|z qux"))
+  (lispyville--define-key 'normal "v" nil)
+  (lispyville-set-key-theme '(mark-togle)))

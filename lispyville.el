@@ -321,7 +321,8 @@ correctly on or after a closing delimiter at the end of the transition."
                ((looking-at lispy-right)
                 (forward-char))
                ((not (or (lispy-left-p)
-                         (lispy-right-p)))
+                         (lispy-right-p)
+                         (region-active-p)))
                 (lispy-right 1)))
          (evil-change-state lispyville-preferred-lispy-state))
         (t
@@ -829,21 +830,41 @@ instead of entering visual state like `evil-normal-state' would."
   (evil-normal-state))
 
 (defmacro lispyville-wrap-command (command state)
-  "Return a function that executes COMMAND and then enters STATE."
-  (let ((name (intern (concat "lispyville-wrap-" (symbol-name command)))))
+  "Return a function that executes COMMAND and then enters STATE.
+The main purpose of this macro is to wrap lispy commands, so that they can be
+used in normal state and end up in lispy special or in visual state with a
+correct selection. STATE can be any evil state, but it is mainly meant to be
+'special' or 'visual', which it will handle differently. When STATE is special,
+the resulting command will enter `lispyville-preferred-lispy-state' and move the
+point (if necessary) to get to lispy special (like motions will when
+`lispyville-motions-put-into-special' is non-nil). When STATE is visual, the
+resulting command will ensure that the selection resulting from COMMAND is
+correct."
+  (let ((name (intern (concat "lispyville-wrap-" (symbol-name command)
+                              "-" (symbol-name state)))))
     `(progn
        (defun ,name ()
          ,(concat "Call `" (symbol-name command) "' and then enter "
-                  (symbol-name state) " state.")
+                  (cl-case state
+                    (special "lispy special.")
+                    (visual "visual state with a corrected selection.")
+                    (t
+                     (concat (symbol-name state) " state."))))
          (interactive)
          (call-interactively #',command)
-         (evil-change-state ',state))
+         ,(cl-case state
+            (special
+             '(lispyville--state-transition t))
+            (visual
+             '(lispyville--state-transition))
+            (t
+             `(evil-change-state ',state))))
        #',name)))
 
 (defun lispyville-toggle-mark-type (arg)
   "Switch between evil visual state and lispy special with an active region.
 `lispyville-preferred-lispy-state' is used to determine the state to switch to
-from visual state. ARG is passed to `lispyville-mark-list' when this command is
+from visual state. ARG is passed to `lispy-mark-list' when this command is
 run in lispy special without an active region or when it is not the default 1."
   (interactive "p")
   (if (region-active-p)
@@ -988,9 +1009,9 @@ When THEME is not given, `lispville-key-theme' will be used instead."
             ((eq type 'mark)
              (setq states (or states '(normal visual)))
              (lispyville--define-key states
-               "v" #'lispy-mark-symbol
-               "V" #'lispy-mark
-               (kbd "C-v") #'lispy-mark))
+               "v" (lispyville-wrap-command lispy-mark-symbol visual)
+               "V" (lispyville-wrap-command lispy-mark visual)
+               (kbd "C-v") #'lispyville-wrap-lispy-mark-visual))
             ((eq type 'mark-toggle)
              (setq states (or states '(insert emacs)))
              (lispyville--define-key '(visual)
