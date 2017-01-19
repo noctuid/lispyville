@@ -526,7 +526,7 @@ This is not like the default `evil-yank-line'."
   (lispyville-change beg end type register yank-handler
                      #'lispyville-delete-line))
 
-(evil-define-operator evil-delete-whole-line
+(evil-define-operator lispyville-delete-whole-line
     (beg end type register yank-handler)
   "Delete whole line."
   :motion evil-line
