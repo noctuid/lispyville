@@ -68,6 +68,10 @@ lispyville has been loaded."
              :tag "Lispy commands for marking."
               mark)
             (const
+             :tag "Lispy commands for marking that enter special instead of
+visual state."
+              mark-special)
+            (const
              :tag "Commands for toggling between special and visual state and
 canceling a region."
               mark-toggle))))
@@ -1012,6 +1016,12 @@ When THEME is not given, `lispville-key-theme' will be used instead."
                "v" (lispyville-wrap-command lispy-mark-symbol visual)
                "V" (lispyville-wrap-command lispy-mark visual)
                (kbd "C-v") #'lispyville-wrap-lispy-mark-visual))
+            ((eq type 'mark-special)
+             (setq states (or states '(normal visual)))
+             (lispyville--define-key states
+               "v" (lispyville-wrap-command lispy-mark-symbol special)
+               "V" (lispyville-wrap-command lispy-mark special)
+               (kbd "C-v") #'lispyville-wrap-lispy-mark-special))
             ((eq type 'mark-toggle)
              (setq states (or states '(insert emacs)))
              (lispyville--define-key '(visual)

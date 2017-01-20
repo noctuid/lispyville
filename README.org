@@ -133,14 +133,14 @@ The corresponding symbol is =escape=. The default states are insert and emacs. S
 |-------+---------------------------|
 | =ESC= | ~lispyville-normal-state~ |
 
-** Mark Key Theme
-The corresponding symbol is =mark=. The default states are normal and visual. See [[#using-only-lispys-mark-commands][here]] for more information. Note that this key theme can be used even if you don't plan to use ~(lispyville-enter-special-when-marking)~ in your configuration.
+** Mark Key Themes
+The corresponding symbols are =mark= and =mark-special=. The default states are normal and visual. While the commands from =mark= will enter visual state, the commands from =mark-special= will enter =lispyville-preferred-lispy-state=. See [[#visual-state-and-special-integration][here]] for more information.
 
-| key   | command                              |
-|-------+--------------------------------------|
-| =v=   | ~lispyville-wrap-mark-symbol-visual~ |
-| =V=   | ~lispyville-wrap-mark-visual~        |
-| =C-v= | ~lispyville-wrap-mark-visual~        |
+| key   | command                     |
+|-------+-----------------------------|
+| =v=   | wrapped ~lispy-mark-symbol~ |
+| =V=   | wrapped ~lispy-mark~        |
+| =C-v= | wrapped ~lispy-mark~        |
 
 ** Mark Toggle Key Theme
 The corresponding symbol is =mark-toggle=. The default states are insert and emacs. Note that =v= will be bound in visual state (not changeable).
@@ -174,6 +174,9 @@ Note that this behavior will not affect the use of motions with an operator or i
 There is also an option for commands called =lispyville-commands-put-into-special= that can be customized in the same way. The currently applicable commands are the slurp and barf commands.
 
 ** Visual State and Special Integration
+:PROPERTIES:
+:CUSTOM_ID: visual-state-and-special-integration
+:END:
 Lispyville tries to be unobtrusive by default, only rebinding the major operator keys. Since there are many potential ways to better integrate evil's visual state with lispy's special (with the region active), lispyville doesn't make a default choice for the user.
 
 *** Using Both Separately
@@ -183,47 +186,37 @@ Lispyville tries to be unobtrusive by default, only rebinding the major operator
 
 This is probably the simplest method of improving things. By default, pressing escape after using something like ~lispy-mark~ from special will enter normal state but won't cancel the region. Lispyville provides ~lispyville-normal-state~ to deactivate the region and enter normal state in one step. You can map it manually or use the =escape= key theme (e.g. ~(lispyville-set-key-theme '(... (escape insert emacs)))~).
 
-On the other hand, if you want to map a key in normal state to mark something with a lispy command like ~lispy-mark~, normally evil's visual state will be entered. If you would rather use lispy's keys after calling specific (but not all) mark commands, you can use ~lispyville-wrap-command~ to create a function that will call a command and then enter a state.
-
+On the other hand, if you want to map a key in normal state to mark something with a lispy command like ~lispy-mark~, normally evil's visual state will be entered, and the selection will be off by a character. ~lispyville-wrap-command~ can be used to create commands that will enter a specific evil state and ensure that the resulting selection is correct. It is mainly meant to be used with =visual= and =special=:
 #+begin_src emacs-lisp
+;; enter visual state after `lispy-mark-symbol' with correct selection
 (evil-define-key 'normal lispyville-mode-map
-  "v" (lispyville-wrap-command lispy-mark-symbol insert))
+  "v" (lispyville-wrap-command lispy-mark-symbol visual))
+;; enter lispy special after `lispy-mark-symbol' with correct selection
+(evil-define-key 'normal lispyville-mode-map
+  "v" (lispyville-wrap-command lispy-mark-symbol special))
 #+end_src
-
-You may also want to use this for binding =m= and related keys for lispy.
 
 To toggle between special and visual state at any time, you can use the =mark-toggle= key theme.
 
-See the next section if you would prefer that lispy's mark commands always enter insert or emacs state.
-
 *** Using Only Lispy's Mark Commands
-:PROPERTIES:
-:CUSTOM_ID: using-only-lispys-mark-commands
-:END:
+Lispy's special mark state won't always work correctly when entered with an active region it wouldn't normally mark (e.g. half of a symbol is marked). Because of this, you'll probably want to rebind =v=, =V=, and =C-v=. Lispyville provides a key theme to remap =v= to a wrapped version of ~lispy-mark-symbol~ and =V= and =C-v= to a wrapped version of ~lispy-mark~ (e.g. ~(lispyville-set-key-theme '(... mark-special))~).
 
-Lispy's special mark state won't work correctly when entered with an active region it wouldn't normally mark (e.g. half of a symbol is marked). Because of this, you'll probably want to rebind =v=, =V=, and =C-v=. Lispyville provides a key theme to remap =v= to a wrapped version of ~lispy-mark-symbol~ and =V= and =C-v= to a wrapped version of ~lispy-mark~ (e.g. ~(lispyville-set-key-theme '(... (mark normal)))~).
-
-To always use lispy's keys, the following can be added to the user's configuration after lispyville loads. It will cause insert or emacs state (based on =lispyville-preferred-lispy-state=) to be entered instead of visual state for commands that would enter visual state.
-#+begin_src emacs-lisp
-(lispyville-enter-special-when-marking)
-#+end_src
-
-If after trying this out, you find you don't like it, you can use ~lispyville-remove-marking-hooks~ (which can be run with =M-x=) to remove the behavior.
+The old way of automatically switching to insert or emacs state was found to have serious bugs, so I do not currently recommend using it. Instead, you need to wrap all selection-related functions that you use with ~lispyville-wrap-command~.
 
 *** Using Only Evil's Mark Commands
-Similarly, one can have all lispy mark commands enter evil's visual state instead:
+One can have all lispy mark commands enter evil's visual state instead:
 #+begin_src emacs-lisp
 (lispyville-enter-visual-when-marking)
 #+end_src
 
-The behavior can be removed in the same way (by using ~lispyville-remove-marking-hooks~).
+The behavior can be removed by running ~lispyville-remove-marking-hooks~.
 
 *** Final Notes
 If you prefer evil or lispy for working with regions but don't want to use either all of the time, it's probably best to pick the one you find the most useful and bind some keys from the other in the relevant keymap.
 
 I may add a key theme for this, but I personally prefer to mainly using lispy's keys, as they are generally more useful than the default evil motions and will keep the region balanced. Evil's commands can be more useful for editing comments, so I'm personally using the first solution ([[#using-both-separately][Using Both Separately]]) to choose which to use.
 
-Note that you can still use the =mark-toggle= keybinding to switch between visual and special even if you run ~(lispyville-enter-special-when-marking)~ or ~(lispyville-enter-visual-when-marking)~.
+Note that you can still use the =mark-toggle= keybinding to switch between visual and special even if you run ~(lispyville-enter-special-when-marking)~ (use not recommended) or ~(lispyville-enter-visual-when-marking)~.
 
 * Lispy Settings
 :PROPERTIES:
