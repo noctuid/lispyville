@@ -321,12 +321,11 @@ If the region is active, transition to visual state. If TO-SPECIAL is non-nil,
 transition to lispy special instead. This function will ensure that the point is
 correctly on or after a closing delimiter at the end of the transition."
   (cond (to-special
-         (cond ((evil-visual-state-p))
+         (cond ((region-active-p))
                ((looking-at lispy-right)
                 (forward-char))
                ((not (or (lispy-left-p)
-                         (lispy-right-p)
-                         (region-active-p)))
+                         (lispy-right-p)))
                 (lispy-right 1)))
          (evil-change-state lispyville-preferred-lispy-state))
         (t
