@@ -320,29 +320,31 @@ evil-cleverparens."
 If the region is active, transition to visual state. If TO-SPECIAL is non-nil,
 transition to lispy special instead. This function will ensure that the point is
 correctly on or after a closing delimiter at the end of the transition."
-  (cond (to-special
-         (cond ((region-active-p))
-               ((looking-at lispy-right)
-                (forward-char))
-               ((not (or (lispy-left-p)
-                         (lispy-right-p)))
-                (lispy-right 1)))
-         (evil-change-state lispyville-preferred-lispy-state))
-        (t
-         (let* ((regionp (region-active-p))
-                (mark (mark t))
-                (point-last-p (> (point) mark))
-                evil-move-cursor-back)
-           ;; if region active, this prevents from entering insert after exiting
-           ;; visual state
-           (evil-normal-state nil)
-           (when (or (and regionp point-last-p)
-                     (lispy-right-p))
-             (backward-char))
+  (let ((regionp (region-active-p))
+        (mark (mark t)))
+    (cond (to-special
+           (cond (regionp)
+                 ((looking-at lispy-right)
+                  (forward-char))
+                 ((not (or (lispy-left-p)
+                           (lispy-right-p)))
+                  (lispy-right 1)))
+           (evil-change-state lispyville-preferred-lispy-state)
            (when regionp
-             (if point-last-p
-                 (evil-visual-char mark (point))
-               (evil-visual-char (1- mark) (point))))))))
+             (set-mark mark)))
+          (t
+           (let* ((point-last-p (> (point) mark))
+                  evil-move-cursor-back)
+             ;; if region active, this prevents from entering insert after exiting
+             ;; visual state
+             (evil-normal-state nil)
+             (when (or (and regionp point-last-p)
+                       (lispy-right-p))
+               (backward-char))
+             (when regionp
+               (if point-last-p
+                   (evil-visual-char mark (point))
+                 (evil-visual-char (1- mark) (point)))))))))
 
 (defun lispyville--maybe-enter-special (&optional command)
   "Potentially enter insert or emacs state to get into special.
