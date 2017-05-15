@@ -95,6 +95,8 @@ The corresponding symbol is =additional-movement=. The default state is motion (
 
 ~lispyville-left~ is an alias for ~lispyville-backward-up-list~, and ~lispyville-right~ is an alias for ~lispyville-up-list~.
 
+There is also the unbound ~lispyville-beginning-of-next-defun~.
+
 ** Slurp/Barf Key Themes
 Two key themes are provided for slurping and barfing keybindings. The default state for both is normal. Note that the commands in both key themes work with digit arguments. A positive argument will barf or slurp that many times like in cleverparens. Additionally, for the slurp commands, an argument of =-1= will slurp to the end of the line where the sexp after the closing paren ends, and an argument of =0= will slurp as far as possible. See the documentation for [[http://oremacs.com/lispy/#lispy-slurp][lispy-slurp]] for more information. Also see [[https://github.com/noctuid/lispyville#more-fluid-transitioning-between-normal-state-and-special][here]] for some extra information on automatically entering special after executing these commands.
 

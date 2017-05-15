@@ -596,6 +596,12 @@ This won't jump to the end of the buffer if there is no paren there."
   (re-search-backward lispy-right nil t)
   (lispyville--maybe-enter-special))
 
+(evil-define-motion lispyville-beginning-of-next-defun (count)
+  "Goto the beginning of the next top-level sexp COUNT times."
+  (end-of-defun (1+ (or count 1)))
+  (beginning-of-defun)
+  (lispyville--maybe-enter-special))
+
 ;; lispy-flow like (and reverse)
 (defun lispyville--move-to-delimiter (count &optional type)
   "Move COUNT times to the next TYPE delimiter.
