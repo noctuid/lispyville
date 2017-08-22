@@ -192,31 +192,6 @@ character after it is not considered as part of the region."
                      (kbd "C-v D"))
                    "|( b)\n( d)")))
 
-(ert-deftest lispyville-change ()
-  ;; linewise; unlike dd, cc shouldn't bring parens up to previous line
-  (should (string= (lispyville-with "((\n  |(a b)))"
-                     "cc")
-                   "((\n  |))"))
-  (should (string= (lispyville-with "(\n  |(a b)\n  (c d))"
-                     "2cc")
-                   "(\n |)"))
-  ;; test that works at end of buffer
-  (should (string= (lispyville-with "|(a b)" "cc")
-                   "|"))
-  ;; test that undo is one step (evil-want-fine-undo nil)
-  (should (string= (lispyville-with "(defvar foo\n  bar baz)|"
-                     (concat "cchello" (kbd "ESC") "u"))
-                   "(defvar foo\n  bar baz)|")))
-
-(ert-deftest lispyville-change-whole-line ()
-  (should (string= (lispyville-with "((\n  |(a b)))"
-                     "S")
-                   "((\n  |))")))
-
-;; pretty much already tested
-;; (ert-deftest lispyville-change-line ()
-;;   )
-
 (ert-deftest lispyville-delete-char-or-splice ()
   (should (string= (lispyville-with "(|a)"
                      "x")
@@ -267,6 +242,41 @@ character after it is not considered as part of the region."
   (should (string= (lispyville-with "~(a b)\n(|c d)"
                      (kbd "C-v X"))
                    "| b\n d")))
+
+(ert-deftest lispyville-delete-backward-word ()
+  (should (string= (lispyville-with "(foo bar|)" (kbd "C-w"))
+                   "(foo |)"))
+  (should (string= (lispyville-with "(|a)" (kbd "C-w"))
+                   "|"))
+  (should (string= (lispyville-with "(a)|" (kbd "C-w"))
+                   "|"))
+  (should (string= (lispyville-with "\"a\"|" (kbd "C-w"))
+                   "|")))
+
+(ert-deftest lispyville-change ()
+  ;; linewise; unlike dd, cc shouldn't bring parens up to previous line
+  (should (string= (lispyville-with "((\n  |(a b)))"
+                     "cc")
+                   "((\n  |))"))
+  (should (string= (lispyville-with "(\n  |(a b)\n  (c d))"
+                     "2cc")
+                   "(\n |)"))
+  ;; test that works at end of buffer
+  (should (string= (lispyville-with "|(a b)" "cc")
+                   "|"))
+  ;; test that undo is one step (evil-want-fine-undo nil)
+  (should (string= (lispyville-with "(defvar foo\n  bar baz)|"
+                     (concat "cchello" (kbd "ESC") "u"))
+                   "(defvar foo\n  bar baz)|")))
+
+;; pretty much already tested
+;; (ert-deftest lispyville-change-line ()
+;;   )
+
+(ert-deftest lispyville-change-whole-line ()
+  (should (string= (lispyville-with "((\n  |(a b)))"
+                     "S")
+                   "((\n  |))")))
 
 (ert-deftest lispyville-substitute ()
   (should (string= (lispyville-with "|(a)"

@@ -41,16 +41,18 @@ Additionally, I think that the function used for safe behavior is a lot more san
 I've added this functionality directly to lispy, and if you want lispy's copy, delete, and/or paste commands to keep parentheses balanced, you can set the relevant options for lispy (see [[#lispy-settings][Lispy Settings]]).
 
 * Key Themes
-By default, the only keys that lispyville remaps are the operators. To allow for the user to choose between various sets of keybindings without making them manually remap every command, lispyville provides "key themes" similarly to how lispy does.
+By default, the only keys that lispyville remaps are the operators and =C-w=. To allow for the user to choose between various sets of keybindings without making them manually remap every command, lispyville provides "key themes" similarly to how lispy does.
 
 The user can still define commands in =lispyville-mode= using ~evil-define-key~ or something like [[https://github.com/noctuid/general.el][general]], but ~lispyville-set-key-theme~ can also be used to define keys. It takes one argument which is a list of symbols corresponding to the different themes. By default, most commands will be mapped in normal and visual state. The default states are listed below. To change them, a list of the symbol and the states to map the keys in can be used instead.
 
 As an example, the following command will map the "operators" theme in the normal and visual states, the "escape" theme in just the insert state, and the "additional-movement" theme in the normal, visual, and motion states:
 #+begin_src emacs-lisp
 (with-eval-after-load 'lispyville
-  (lispyville-set-key-theme '(operators
-                              (escape insert)
-                              (additional-movement normal visual motion))))
+  (lispyville-set-key-theme
+   '(operators
+     c-w
+     (escape insert)
+     (additional-movement normal visual motion))))
 #+end_src
 
 ~lispyville-set-key-theme~ will not reset lispyville's keymap, so it will not remove user-defined keybindings (unless they are overwritten by a key in one of the themes). The keybindings will be added in the order of the list, so if there is overlap between the listed themes, the one listed last will take precedence.
@@ -68,6 +70,15 @@ The corresponding symbol is =operators=. The default states are normal and visua
 | =D= | ~lispyville-delete-line~                     |
 | =C= | ~lispyville-change-line~                     |
 | =X= | ~lispyville-delete-char-or-splice-backwards~ |
+
+** C-w Key Theme
+The corresponding symbol is =c-w=. The default states are emacs and insert. This is the safe version of ~evil-delete-backward-word~. It will act as ~lispydelete-backwards~ after delimiters (and delete everything within the delimiters).
+
+The reason no safe version of ~evil-delete-backward-char-and-join~ is provided is because lispy already maps =DEL= to ~lispy-delete-backwards~, which is much more useful.
+
+| key   | command                            |
+|-------+------------------------------------|
+| =C-w= | ~lispyville-delete-backwards-word~ |
 
 ** S Operators Key Theme
 The corresponding symbol is =s-operators=. The default states are normal and visual. I've separated the s operators because I prefer to use =cl= and =cc= and bind the s keys to something else entirely.

@@ -35,7 +35,7 @@
   :group 'lispy
   :prefix 'lispyville)
 
-(defcustom lispyville-key-theme '(operators)
+(defcustom lispyville-key-theme '(operators c-w)
   "Determines the key theme initially set by lispyville.
 Changing this variable will only have an effect by itself when done prior to
 lispyville being loaded. Otherwise, `lispyville-set-key-theme' should be
@@ -149,6 +149,17 @@ Closing delimiters inside strings and comments are ignored."
            (and (looking-at "\"")
                 (lispyville--in-string-p)))
        (not (looking-back "\\\\" (- (point) 2)))))
+
+(defun lispyville--after-delimiter-p ()
+  "Return whether the point is after an opening or closing delimiter."
+  (let ((lispy-delimiters (concat (substring lispy-right 0 -1)
+                                  "\""
+                                  (substring lispy-left 1))))
+    (and (not (lispy--in-string-or-comment-p))
+         (lispy-looking-back lispy-delimiters)
+         (save-excursion
+           (backward-char)
+           (not (looking-back "\\\\" (- (point) 2)))))))
 
 (defun lispyville--yank-text (text &optional register yank-handler)
   "Like `evil-yank-characters' but takes TEXT directly instead of a region.
@@ -482,6 +493,49 @@ This is not like the default `evil-yank-line'."
            (lispyville-delete beg (line-end-position)
                               type register yank-handler)))))
 
+(evil-define-operator lispyville-delete-whole-line
+    (beg end type register yank-handler)
+  "Like `evil-delete-whole-line' but will not delete/copy unmatched delimiters."
+  :motion evil-line
+  (interactive "<R><x>")
+  (lispyville-delete beg end type register yank-handler))
+
+(evil-define-operator lispyville-delete-char-or-splice
+  (beg end type register yank-handler)
+  "Deletes and copies the region by splicing unmatched delimiters."
+  :motion evil-forward-char
+  (interactive "<R><x>")
+  (cond ((eq type 'block)
+         (lispyville--rectangle-safe-delete-by-splice beg end t
+                                                      register yank-handler))
+        (t
+         (lispyville--safe-delete-by-splice beg end t register yank-handler))))
+
+(evil-define-operator lispyville-delete-char-or-splice-backwards
+    (beg end type register yank-handler)
+  "Like `lispyville-delete-char-or-splice' but acts on the preceding character."
+  :motion evil-backward-char
+  (interactive "<R><x>")
+  (lispyville-delete-char-or-splice beg end type register yank-handler))
+
+(evil-define-command lispyville-delete-backward-word ()
+  "Like `evil-delete-backward-word' but will not delete unmatched delimiters.
+This will also act as `lispy-delete-backward' after delimiters."
+  (cond ((and (bolp) (not (bobp)))
+         (unless evil-backspace-join-lines
+           (user-error "Beginning of line"))
+         (delete-char -1))
+        ((lispyville--after-delimiter-p)
+         (lispy-delete-backward 1))
+        (t
+         (lispyville-delete (max
+                             (save-excursion
+                               (evil-backward-word-begin)
+                               (point))
+                             (line-beginning-position))
+                            (point)
+                            'exclusive))))
+
 (defun lispyville--open-here (count)
   "Like `evil-open-above' except inserts at the point."
   (interactive "p")
@@ -531,13 +585,6 @@ This is not like the default `evil-yank-line'."
   (lispyville-change beg end type register yank-handler
                      #'lispyville-delete-line))
 
-(evil-define-operator lispyville-delete-whole-line
-    (beg end type register yank-handler)
-  "Delete whole line."
-  :motion evil-line
-  (interactive "<R><x>")
-  (lispyville-delete beg end type register yank-handler))
-
 (evil-define-operator lispyville-change-whole-line
     (beg end type register yank-handler)
   "Change whole line while respecting parentheses."
@@ -545,24 +592,6 @@ This is not like the default `evil-yank-line'."
   (interactive "<R><x>")
   (lispyville-change beg end type register yank-handler
                      #'lispyville-delete-whole-line))
-
-(evil-define-operator lispyville-delete-char-or-splice
-    (beg end type register yank-handler)
-  "Deletes and copies the region by splicing unmatched delimiters."
-  :motion evil-forward-char
-  (interactive "<R><x>")
-  (cond ((eq type 'block)
-         (lispyville--rectangle-safe-delete-by-splice beg end t
-                                                      register yank-handler))
-        (t
-         (lispyville--safe-delete-by-splice beg end t register yank-handler))))
-
-(evil-define-operator lispyville-delete-char-or-splice-backwards
-    (beg end type register yank-handler)
-  "Like `lispyville-delete-char-or-splice' but acts on the preceding character."
-  :motion evil-backward-char
-  (interactive "<R><x>")
-  (lispyville-delete-char-or-splice beg end type register yank-handler))
 
 (evil-define-operator lispyville-substitute (beg end type register)
   "Acts like `lispyville-change' (cl when not in visual mode)."
@@ -977,6 +1006,10 @@ When THEME is not given, `lispville-key-theme' will be used instead."
                "C" #'lispyville-change-line
                "x" #'lispyville-delete-char-or-splice
                "X" #'lispyville-delete-char-or-splice-backwards))
+            ((eq type 'c-w)
+             (setq states (or states '(insert emacs)))
+             (lispyville--define-key states
+               (kbd "C-w") #'lispyville-delete-backward-word))
             ((eq type 's-operators)
              (setq states (or states '(normal visual)))
              (lispyville--define-key states
