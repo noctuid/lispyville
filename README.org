@@ -236,8 +236,22 @@ Note that you can still use the =mark-toggle= keybinding to switch between visua
 :CUSTOM_ID: lispy-settings
 :END:
 
-I've added the main functions behind safe deletion and copying directly to lispy. To have lispy's commands always act safely on a region, =lispy-safe-delete= and =lispy-safe-copy= can be set to non-nil values. Lispyville's functions keep delimiters balanced regardless of these settings.
+I've added the main functions behind safe deletion and copying directly to lispy. To have lispy's commands always act safely on a region, =lispy-safe-delete=, =lispy-safe-copy=, and =lispy-safe-paste= can be set to non-nil values. Lispyville's commands keep delimiters balanced regardless of these settings. Lispyville does not yet have a safe paste operator though.
 
-The options that /will/ affect lispyville's behavior are =lispy-safe-threshold=, =lispy-safe-actions-ignore-strings=, and =lispy-safe-actions-ignore-comments=. =lispy-safe-threshold= is the maximum size a region can be before operators will not try to keep delimiters balanced. The other two options will determine whether operators will attempt to keep delimiters balanced in strings and comments.
+The options that /will/ affect lispyville's behavior are =lispy-safe-threshold=, =lispy-safe-actions-ignore-strings=, =lispy-safe-actions-ignore-comments=, and =lispy-safe-actions-no-pull-delimiters-into-comments=.
 
-There is also a ~lispy-safe-paste~ option that will add missing delimiters to the start and end of pasted text. I've yet to make an equivalent paste operator.
+=lispy-safe-threshold= is the maximum size a region can be before operators will no longer attempt to keep delimiters balanced. If you ever have an issue with the limit, you can try increasing it and see if there are any performance issues. I haven't tested performance on larger regions, so any feedback would be appreciated.
+
+The "ignore" options will determine whether commands will ignore unbalanced delimiters in comments and strings. It is recommended to keep these options at their default value (true).
+
+When =lispy-safe-actions-no-pull-delimiters-into-comments= is non-nil, lispy/lispyville commands will avoid pulling unmatched delimiters into comments (e.g. =dd= on a line after a comment will keep unmatched closing delimiters on the same line instead of commenting them out).
+
+By default, ~lispyville-mode~ will automatically make the following changes when turned on for maximum safety levels:
+#+begin_src emacs-lisp
+(setq lispy-safe-delete t
+      lispy-safe-copy t
+      lispy-safe-paste t
+      lispy-safe-actions-no-pull-delimiters-into-comments t)
+#+end_src
+
+To prevent lispyville from changing lispy variables, you can set =lispyville-no-alter-lispy-options= to a non-nil value.
