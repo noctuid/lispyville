@@ -925,7 +925,7 @@ run in lispy special without an active region or when it is not the default 1."
   (if (region-active-p)
       (cond ((evil-visual-state-p)
              (lispyville--state-transition t))
-            ((memq evil-state '(insert emacs))
+            ((memq evil-state '(insert emacs hybrid iedit-insert))
              (cond ((= arg 1)
                     (setq lispyville--inhibit-next-special-force t)
                     (lispyville--state-transition))
