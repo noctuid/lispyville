@@ -125,6 +125,10 @@ to a non-nil value."
   (add-to-list 'evil-surround-operator-alist '(lispyville-change . change))
   (add-to-list 'evil-surround-operator-alist '(lispyville-delete . delete)))
 
+;; https://github.com/noctuid/lispyville/pull/26
+(when (boundp 'evil-change-commands)
+  (add-to-list 'evil-change-commands #'lispyville-change))
+
 ;;;###autoload
 (define-minor-mode lispyville-mode
     "A minor mode for integrating evil with lispy."
