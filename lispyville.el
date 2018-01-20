@@ -992,16 +992,11 @@ marking something using a command like `lispy-mark' from special."
   (remove-hook 'activate-mark-hook #'lispyville--enter-visual))
 
 ;;; * Keybindings
-(defmacro lispyville--define-key (states &rest maps)
-  "Helper function for defining keys in multiple STATES at once.
-MAPS are the keys and commands to define in lispyville-mode-map.
-Not meant to be used by the user."
+;; TODO update evil dependency on next release (evil-define-key*)
+(defun lispyville--define-key (states &rest maps)
+  "Helper function for defining keys in `lispyville-mode-map'."
   (declare (indent 1))
-  (let ((state (cl-gensym "state")))
-    `(if (listp ,states)
-         (dolist (,state ,states)
-           (evil-define-key ,state lispyville-mode-map ,@maps))
-       (evil-define-key ,states lispyville-mode-map ,@maps))))
+  (apply #'evil-define-key* states lispyville-mode-map maps))
 
 ;;;###autoload
 (defun lispyville-set-key-theme (&optional theme)
@@ -1015,27 +1010,26 @@ When THEME is not given, `lispville-key-theme' will be used instead."
           (states (when (listp item)
                     (cdr item))))
       (cond ((eq type 'operators)
-             (setq states (or states '(normal visual)))
+             (setq states (or states 'normal))
              (lispyville--define-key states
-               "y" #'lispyville-yank
-               "d" #'lispyville-delete
-               "c" #'lispyville-change
-               "Y" #'lispyville-yank-line
-               "D" #'lispyville-delete-line
-               "C" #'lispyville-change-line
-               "x" #'lispyville-delete-char-or-splice
-               "X" #'lispyville-delete-char-or-splice-backwards))
+               [remap evil-yank] #'lispyville-yank
+               [remap evil-delete] #'lispyville-delete
+               [remap evil-change] #'lispyville-change
+               [remap evil-yank-line] #'lispyville-yank-line
+               [remap evil-delete-line] #'lispyville-delete-line
+               [remap evil-change-line] #'lispyville-change-line
+               [remap evil-delete-char] #'lispyville-delete-char-or-splice
+               [remap evil-delete-backward-char]
+               #'lispyville-delete-char-or-splice-backwards
+               [remap evil-substitute] #'lispyville-substitute
+               [remap evil-change-whole-line] #'lispyville-change-whole-line))
             ((eq type 'c-w)
              (setq states (or states '(insert emacs)))
              (lispyville--define-key states
-               (kbd "C-w") #'lispyville-delete-backward-word))
-            ((eq type 's-operators)
-             (setq states (or states '(normal visual)))
-             (lispyville--define-key states
-               "s" #'lispyville-substitute
-               "S" #'lispyville-change-whole-line))
+               [remap evil-delete-backward-word]
+               #'lispyville-delete-backward-word))
             ((eq type 'additional-movement)
-             (setq states (or states '(motion)))
+             (setq states (or states 'motion))
              (lispyville--define-key states
                "H" #'lispyville-backward-sexp
                "L" #'lispyville-forward-sexp
@@ -1051,12 +1045,12 @@ When THEME is not given, `lispville-key-theme' will be used instead."
                "(" #'lispyville-backward-up-list
                ")" #'lispyville-up-list))
             ((eq type 'slurp/barf-cp)
-             (setq states (or states '(normal)))
+             (setq states (or states 'normal))
              (lispyville--define-key states
                ">" #'lispyville->
                "<" #'lispyville-<))
             ((eq type 'slurp/barf-lispy)
-             (setq states (or states '(normal)))
+             (setq states (or states 'normal))
              (lispyville--define-key states
                ">" #'lispyville-slurp
                "<" #'lispyville-barf))
@@ -1083,7 +1077,7 @@ When THEME is not given, `lispville-key-theme' will be used instead."
                (kbd "C-v") #'lispyville-wrap-lispy-mark-special))
             ((eq type 'mark-toggle)
              (setq states (or states '(insert emacs)))
-             (lispyville--define-key '(visual)
+             (lispyville--define-key 'visual
                "v" #'lispyville-toggle-mark-type)
              (lispyville--define-key states
                (kbd "<escape>") #'lispyville-escape))))))

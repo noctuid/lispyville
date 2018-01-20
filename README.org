@@ -1,3 +1,7 @@
+* Recent Changes
+** 2018-01-20: =s-operators= key theme has been removed
+The =operators= key theme now remaps commands instead of directly binding keys, so there is no longer a need for a separate =s-operators= key theme.
+
 * About LispyVille
 Welcome to LispyVille!
 
@@ -58,35 +62,29 @@ As an example, the following command will map the "operators" theme in the norma
 ~lispyville-set-key-theme~ will not reset lispyville's keymap, so it will not remove user-defined keybindings (unless they are overwritten by a key in one of the themes). The keybindings will be added in the order of the list, so if there is overlap between the listed themes, the one listed last will take precedence.
 
 ** Operators Key Theme
-The corresponding symbol is =operators=. The default states are normal and visual. These are safe versions of the corresponding evil operators that won't unbalance parentheses. Like with cleverparens, =dd= will bring closing delimiters that are on a line by themselves to the previous line while =cc= won't. To disable this behavior, =lispyville-dd-stay-with-closing= can be set to a non-nil value.
+The corresponding symbol is =operators=. The default state is normal. These are safe versions of the corresponding evil operators that won't unbalance parentheses. Like with cleverparens, =dd= will bring closing delimiters that are on a line by themselves to the previous line while =cc= won't. To disable this behavior, =lispyville-dd-stay-with-closing= can be set to a non-nil value.
 
-| key | command                                      |
-|-----+----------------------------------------------|
-| =y= | ~lispyville-yank~                            |
-| =d= | ~lispyville-delete~                          |
-| =c= | ~lispyville-change~                          |
-| =x= | ~lispyville-delete-char-or-splice~           |
-| =Y= | ~lispyville-yank-line~                       |
-| =D= | ~lispyville-delete-line~                     |
-| =C= | ~lispyville-change-line~                     |
-| =X= | ~lispyville-delete-char-or-splice-backwards~ |
+| key                                 | command                                      |
+|-------------------------------------+----------------------------------------------|
+| =[remap evil-yank]=                 | ~lispyville-yank~                            |
+| =[remap evil-delete]=               | ~lispyville-delete~                          |
+| =[remap evil-change]=               | ~lispyville-change~                          |
+| =[remap evil-yank-line]=            | ~lispyville-yank-line~                       |
+| =[remap evil-delete-line]=          | ~lispyville-delete-line~                     |
+| =[remap evil-change-line]=          | ~lispyville-change-line~                     |
+| =[remap evil-delete-char]=          | ~lispyville-delete-char-or-splice~           |
+| =[remap evil-delete-backward-char]= | ~lispyville-delete-char-or-splice-backwards~ |
+| =[remap evil-substitute]=           | ~lispyville-substitute~                      |
+| =[remap evil-change-whole-line]=    | ~lispyville-change-whole-line~               |
 
 ** C-w Key Theme
-The corresponding symbol is =c-w=. The default states are emacs and insert. This is the safe version of ~evil-delete-backward-word~. It will act as ~lispydelete-backwards~ after delimiters (and delete everything within the delimiters).
+The corresponding symbol is =c-w=. The default states are emacs and insert. This is the safe version of ~evil-delete-backward-word~. It will act as ~lispy-delete-backward~ after delimiters (and delete everything within the delimiters).
 
-The reason no safe version of ~evil-delete-backward-char-and-join~ is provided is because lispy already maps =DEL= to ~lispy-delete-backwards~, which is much more useful.
+The reason no safe version of ~evil-delete-backward-char-and-join~ is provided is because lispy already maps =DEL= to ~lispy-delete-backward~.
 
-| key   | command                            |
-|-------+------------------------------------|
-| =C-w= | ~lispyville-delete-backwards-word~ |
-
-** S Operators Key Theme
-The corresponding symbol is =s-operators=. The default states are normal and visual. I've separated the s operators because I prefer to use =cl= and =cc= and bind the s keys to something else entirely.
-
-| key | command                        |
-|-----+--------------------------------|
-| =s= | ~lispyville-substitute~        |
-| =S= | ~lispyville-change-whole-line~ |
+| key                                 | command                            |
+|-------------------------------------+------------------------------------|
+| =[remap evil-delete-backward-word]= | ~lispyville-delete-backward-word~  |
 
 ** Additional Movement Key Theme
 The corresponding symbol is =additional-movement=. The default state is motion (inherited in the normal, visual, and operator states). This key theme is the equivalent of cleverparen's additional movement keys. =[= and =]= are like the reverse of ~lispy-flow~. ={= and =}= are like ~lispy-flow~. =(= and =)= are like ~lispy-left~ and ~lispy-right~. Also see [[https://github.com/noctuid/lispyville#more-fluid-transitioning-between-normal-state-and-special][here]] for some extra information on automatically enter special after executing these motions.
