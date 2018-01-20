@@ -7,4 +7,5 @@
 
 (development
  (depends-on "evil")
- (depends-on "lispy"))
+ (depends-on "lispy")
+ (depends-on "cl-lib"))

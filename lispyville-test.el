@@ -244,13 +244,13 @@ character after it is not considered as part of the region."
                    "| b\n d")))
 
 (ert-deftest lispyville-delete-backward-word ()
-  (should (string= (lispyville-with "(foo bar|)" (kbd "C-w"))
+  (should (string= (lispyville-with "(foo bar|)" (kbd "i C-w"))
                    "(foo |)"))
-  (should (string= (lispyville-with "(|a)" (kbd "C-w"))
+  (should (string= (lispyville-with "(|a)" (kbd "i C-w"))
                    "|"))
-  (should (string= (lispyville-with "(a)|" (kbd "C-w"))
+  (should (string= (lispyville-with "(a)|" (kbd "i C-w"))
                    "|"))
-  (should (string= (lispyville-with "\"a\"|" (kbd "C-w"))
+  (should (string= (lispyville-with "\"a\"|" (kbd "i C-w"))
                    "|")))
 
 (ert-deftest lispyville-change ()
