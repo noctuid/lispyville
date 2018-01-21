@@ -5,6 +5,7 @@ LOAD = -l lispyville.el
 
 cask:
 	$(shell EMACS=$(emacs) $(CASK) --verbose --debug)
+	$(CASK) update
 
 test:
 	@echo "Using $(shell which $(emacs))..."
