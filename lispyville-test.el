@@ -1,11 +1,15 @@
 (require 'lispyville)
+
 (setq lispyville-key-theme '(operators
                              s-operators
+                             c-w
                              additional-movement
                              slurp/barf-cp
                              additional
                              mark-toggle))
 (lispyville-set-key-theme)
+
+(setq evil-move-cursor-back nil)
 
 (defmacro lispyville-with (in &rest body)
   "This is `lispy-with' modified for lispyville.
@@ -57,7 +61,8 @@ character after it is not considered as part of the region."
 (defun lispyville-replace-with-last-kill ()
   "Replace buffer with last kill."
   (delete-region (point-min) (point-max))
-  (yank))
+  (yank)
+  (goto-char (point-max)))
 
 ;;; Operators
 (ert-deftest lispyville-yank ()
@@ -74,21 +79,21 @@ character after it is not considered as part of the region."
                      "y"
                      (lispyville-replace-with-last-kill))
                    "a { b [ c \"testing\"]}|"))
-  ;; linewise
+  ;; linewise (always ends with newline)
   (should (string= (lispyville-with "((\n  |(a b)))"
                      "yy"
                      (lispyville-replace-with-last-kill))
-                   "  (a b)|"))
+                   "  (a b)\n|"))
   (should (string= (lispyville-with "(\n  |(a b)\n  (c d))"
                      "2yy"
                      (lispyville-replace-with-last-kill))
-                   "  (a b)\n  (c d)|"))
+                   "  (a b)\n  (c d)\n|"))
   ;; test that works at end of buffer
   (should (string= (lispyville-with "|(a b)"
                      "yy"
                      (lispyville-replace-with-last-kill))
-                   "(a b)|"))
-  ;; test yank handler (pasting after linewise yank)
+                   "(a b)\n|"))
+  ;; test yank handler/pasting after linewise yank
   (should (string= (lispyville-with "((\n  |(a b)))"
                      "yyp")
                    "((\n  (a b)))\n  |(a b)"))
@@ -103,7 +108,12 @@ character after it is not considered as part of the region."
   (should (string= (lispyville-with "~(a b)\n(|c d)"
                      (kbd "C-v y")
                      (lispyville-replace-with-last-kill))
-                   "a\nc|")))
+                   "a\nc|"))
+  ;; test yank handler/pasting after yanking block
+  (should (string= (lispyville-with "~(a b)\n(|c d)"
+                     (kbd "C-v y")
+                     "p")
+                   "(|aa b)\n(cc d)")))
 
 (ert-deftest lispyville-yank-line ()
   (should (string= (lispyville-with "(|a (b c) d)"
@@ -145,12 +155,33 @@ character after it is not considered as part of the region."
                      "d")
                    "(|)"))
   ;; linewise
+  ;; after deletion, at closing delimiter(s)
   (should (string= (lispyville-with "((\n  |(a b)))"
                      "dd")
                    "|(())"))
+  (should (string= (lispyville-with "((\n  |(a b)))\n"
+                     "dd")
+                   "(())\n|"))
   (should (string= (lispyville-with "(\n |(a b)\n (c d))"
                      "2dd")
                    "|()"))
+  ;; closing delimiter(s) but comment before
+  (should (string= (lispyville-with "((; comment\n  |(a b)))"
+                     "dd")
+                   "((; comment\n  |))"))
+  (let ((lispyville-dd-stay-with-closing t))
+    (should (string= (lispyville-with "((\n  |(a b)))\n"
+                       "dd")
+                     "((\n  |))")))
+  ;; after deletion, at opening delimiter(s)
+  (should (string= (lispyville-with "|(a b\n   c)"
+                     "dd")
+                   ;; should remove whitespace
+                   "|(c)"))
+  ;; should delete final newline
+  (should (string= (lispyville-with "a\n|"
+                     "dd")
+                   "|a"))
   ;; test that works at end of buffer
   (should (string= (lispyville-with "|(a b)" "dd")
                    "|"))
@@ -174,7 +205,14 @@ character after it is not considered as part of the region."
                    "|( b)\n( d)"))
   ;; test whether delimiters are pulled into comments
   (should (string= (lispyville-with "(a\n ;; b\n |c)" "dd")
-                   "(a\n ;; b\n |)")))
+                   "(a\n ;; b\n |)"))
+  (should (string= (lispyville-with "(a\n ;;~ b\n c)|" "d")
+                   "(a\n ;;|\n)"))
+  (should (string= (lispyville-with ";; ~a\n(b\n ;;| c\n d)" "d")
+                   ";; |\n(c\n d)"))
+  ;; should pull into comment here since no unmatched delimiters
+  (should (string= (lispyville-with ";; ~a\nb| c" "d")
+                   ";; |c")))
 
 (ert-deftest lispyville-delete-line ()
   (should (string= (lispyville-with "(|a (b c) d)"
@@ -184,6 +222,9 @@ character after it is not considered as part of the region."
   (should (string= (lispyville-with "((\n  ~|(a b)))"
                      "D")
                    "|(())"))
+  (should (string= (lispyville-with "((\n  ~|(a b)))\n"
+                     "D")
+                   "(())\n|"))
   ;; visual block
   (should (string= (lispyville-with "((~a b)\n (c d|))"
                      (kbd "C-v D"))
@@ -263,7 +304,7 @@ character after it is not considered as part of the region."
                    "(\n |)"))
   ;; test that works at end of buffer
   (should (string= (lispyville-with "|(a b)" "cc")
-                   "|"))
+                   "|\n"))
   ;; test that undo is one step (evil-want-fine-undo nil)
   (should (string= (lispyville-with "(defvar foo\n  bar baz)|"
                      (concat "cchello" (kbd "ESC") "u"))

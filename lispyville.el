@@ -77,9 +77,9 @@ canceling a region."
               mark-toggle))))
 
 (defcustom lispyville-dd-stay-with-closing nil
-  "When non-nil, dd (`lispyville-delete') will move the point up a line.
-The point will be placed just before the unmatched delimiters that were not
-deleted."
+  "When non-nil, don't move closing delimiters after dd (`lispyville-delete').
+This prevents dd from moving closing delimiters on an empty line by themselves
+to the previous line."
   :group 'lispyville
   :type 'boolean)
 
@@ -180,66 +180,53 @@ Closing delimiters inside strings and comments are ignored."
            (backward-char)
            (not (looking-back "\\\\" (- (point) 2)))))))
 
-(defun lispyville--yank-text (text &optional register yank-handler)
+(defun lispyville--yank-text (text &optional type register yank-handler)
   "Like `evil-yank-characters' but takes TEXT directly instead of a region.
-REGISTER and YANK-HANDLER have the same effect."
-  (when yank-handler
-    (setq text (propertize text 'yank-handler (list yank-handler))))
-  (when register
-    (evil-set-register register text))
-  (when evil-was-yanked-without-register
-    (evil-set-register ?0 text))
-  (unless (eq register ?_)
-    (kill-new text)))
+Depending on TYPE, this will behave like `evil-yank-characters',
+`evil-yank-lines', or `evil-yank-rectangle'. REGISTER and YANK-HANDLER have the
+same effect."
+  (let ((lines (split-string text "\n")))
+    (setq yank-handler
+          (cl-case type
+            (block (list (or yank-handler #'evil-yank-block-handler)
+                         lines
+                         t
+                         'evil-delete-yanked-rectangle))
+            (line (list (or yank-handler
+                            #'evil-yank-line-handler)
+                        nil
+                        t))
+            (t (when yank-handler
+                 (list yank-handler)))))
+    ;; ensure newline at end of text for line type
+    (when (and (eq type 'line)
+               (or (zerop (length text))
+                   (/= (aref text (1- (length text))) ?\n)))
+      (setq text (concat text "\n")))
+    (when yank-handler
+      (setq text (propertize text 'yank-handler yank-handler)))
+    (when register
+      (evil-set-register register text))
+    (when evil-was-yanked-without-register
+      (evil-set-register ?0 text))
+    (unless (eq register ?_)
+      (kill-new text))))
 
-(defun lispyville--safe-manipulate
-    (beg end &optional delete yank register yank-handler)
-  "Return the text from BEG to END excluding unmatched delimiters.
-When DELETE is non-nil, delete the safe part of the region. When YANK is
-non-nil, also copy the safe text to the kill ring. REGISTER and YANK-HANDLER
-should also be supplied if YANK is non-nil."
-  (let ((safe-regions (if (lispy--in-comment-p)
-                          (list (cons beg end))
-                        (lispy--find-safe-regions beg end)))
-        safe-strings
-        safe-string)
+(defun lispyville--safe-string (beg end &optional delete)
+  "Return the text between from BEG to END excluding unmatched delimiters.
+When DELETE is non-nil, delete the safe part of the region."
+  (let ((safe-regions (lispy--find-safe-regions beg end))
+        safe-strings)
     (dolist (safe-region safe-regions)
-      ;; TODO should properties be preserved?
-      (push (lispy--string-dwim safe-region) safe-strings)
+      ;; NOTE evil uses `filter-buffer-substring'
+      (push (filter-buffer-substring (car safe-region) (cdr safe-region))
+            safe-strings)
       (when delete
         (delete-region (car safe-region) (cdr safe-region))))
-    (setq safe-string (apply #'concat safe-strings))
-    (when yank
-      (lispyville--yank-text safe-string register yank-handler))
-    safe-string))
-
-(defvar lispyville--safe-strings-holder nil)
-(defun lispyville--safe-manipulate-rectangle
-    (beg end &optional delete yank register yank-handler)
-  "Like `lispyville--safe-manipulate' but operate on a rectangle/block.
-BEG AND END mark the start and beginning of the rectangle. DELETE, YANK,
-REGISTER, and YANK-HANDLER all have the same effect as in
-`lispyville--safe-manipulate'."
-  (let (safe-string)
-    (apply-on-rectangle
-     (lambda (beg end delete)
-       (setq beg (save-excursion (move-to-column beg) (point)))
-       (setq end (save-excursion (move-to-column end) (point)))
-       (push
-        (lispyville--safe-manipulate beg end delete)
-        lispyville--safe-strings-holder))
-     beg end delete)
-    (setq safe-string (apply #'concat
-                             (lispy-interleave
-                              "\n"
-                              (nreverse lispyville--safe-strings-holder))))
-    (setq lispyville--safe-strings-holder nil)
-    (when yank
-      (lispyville--yank-text safe-string register yank-handler))
-    safe-string))
+    (apply #'concat safe-strings)))
 
 (defun lispyville--splice ()
-  "Like `lispy-splice' but will also splice strings."
+  "Like `lispy-splice' but also splice strings."
   (save-excursion
     (if (looking-at "\"")
         (cond ((save-excursion
@@ -258,92 +245,64 @@ REGISTER, and YANK-HANDLER all have the same effect as in
                (delete-char -1)))
       (lispy-splice 1))))
 
-;; TODO get rid of redundancy for these 2 and previous 2
-(defun lispyville--safe-delete-by-splice
-    (beg end &optional yank register yank-handler)
-  "Like `lispyville--safe-manipulate' except always deletes.
+(defun lispyville--safe-string-splice (beg end)
+  "Like `lispyville--safe-string' except always deletes.
 Instead of ignoring unmatched delimiters between BEG and END, this will splice
-them. YANK, REGISTER, and YANK-HANDLER all have the same effect."
-  (let ((unmatched-positions (lispy--find-unmatched-delimiters beg end)))
+them."
+  (let ((unmatched-positions (lispy--find-unmatched-delimiters beg end))
+        safe-text)
     (evil-exit-visual-state)
     (save-excursion
       (dolist (pos unmatched-positions)
         (goto-char pos)
         (lispyville--splice))
-
       (setq end (- end (length unmatched-positions)))
-      (let ((safe-text (lispy--string-dwim (cons beg end))))
-        (when yank
-          (lispyville--yank-text safe-text register yank-handler))
-        (delete-region beg end)
-        safe-text))))
+      (setq safe-text (filter-buffer-substring beg end))
+      (delete-region beg end)
+      safe-text)))
 
-(defun lispyville--rectangle-safe-delete-by-splice
-    (beg end &optional yank register yank-handler)
-  "Like `lispyville--safe-manipulate' but operate on a rectangle/block.
-BEG, END, YANK, REGISTER, and YANK-HANDLER all have the same effect."
+(defvar lispyville--safe-strings nil
+  "Temporary list of safe strings for `lispyville--safe-string-rectangle'.")
+
+(defun lispyville--safe-string-rectangle
+    (beg end &optional delete)
+  "Like `lispyville--safe-string' but operates on a rectangle/block.
+BEG and END correspond to the start and beginning of the rectangle. DELETE is
+passed to `lispyville--safe-string'. If DELETE is the symbol 'splice,
+`lispyville--safe-string-splice' will be used instead."
+  (setq lispyville--safe-strings nil)
   (let (safe-string)
     (apply-on-rectangle
-     (lambda (beg end)
+     (lambda (beg end delete)
        (setq beg (save-excursion (move-to-column beg) (point)))
        (setq end (save-excursion (move-to-column end) (point)))
-       (push
-        (lispyville--safe-delete-by-splice beg end)
-        lispyville--safe-strings-holder))
-     beg end)
-    (setq safe-string (apply #'concat
-                             (lispy-interleave
-                              "\n"
-                              (nreverse lispyville--safe-strings-holder))))
-    (setq lispyville--safe-strings-holder nil)
-    (when yank
-      (lispyville--yank-text safe-string register yank-handler))
-    safe-string))
+       (push (if (eq delete 'splice)
+                 (lispyville--safe-string-splice beg end)
+               (lispyville--safe-string beg end delete))
+             lispyville--safe-strings))
+     beg end delete)
+    (apply #'concat
+           (lispy-interleave
+            "\n"
+            (nreverse lispyville--safe-strings)))))
 
-(defun lispyville--yank-line-handler (text)
-  "Modified version of `evil-yank-line-handler' to handle lack of newlines.
-The differences are commented on. This is the same yank handler used in
-evil-cleverparens."
-  (let ((text (apply #'concat (make-list (or evil-paste-count 1) text)))
-        (opoint (point)))
-    (remove-list-of-text-properties
-     0 (length text) yank-excluded-properties text)
-    (cond
-      ((eq this-command 'evil-paste-before)
-       (evil-move-beginning-of-line)
-       (evil-move-mark (point))
-       ;; insert a newline afterwards
-       (insert text "\n")
-       (setq evil-last-paste
-             (list 'evil-paste-before
-                   evil-paste-count
-                   opoint
-                   (mark t)
-                   (point)))
-       (evil-set-marker ?\[ (mark))
-       (evil-set-marker ?\] (1- (point)))
-       (evil-exchange-point-and-mark)
-       (back-to-indentation))
-      ((eq this-command 'evil-paste-after)
-       (evil-move-end-of-line)
-       (evil-move-mark (point))
-       (insert "\n")
-       (insert text)
-       (evil-set-marker ?\[ (1+ (mark)))
-       (evil-set-marker ?\] (1- (point)))
-       ;; don't delete last character
-       ;; (delete-char -1)
-       (setq evil-last-paste
-             (list 'evil-paste-after
-                   evil-paste-count
-                   opoint
-                   (mark t)
-                   (point)))
-       (evil-move-mark (1+ (mark t)))
-       (evil-exchange-point-and-mark)
-       (back-to-indentation))
-      (t
-       (insert text)))))
+(defun lispyville--safe-manipulate
+    (beg end &optional type delete yank register yank-handler)
+  "Return the text from BEG to END excluding unmatched delimiters.
+When DELETE is non-nil, delete the safe part of the region. When DELETE is the
+symbol 'splice, splice unmatched delimiters instead of ignoring them. When YANK
+is non-nil, also copy the safe text to the kill ring. REGISTER and YANK-HANDLER
+are passed to `lispyville--yank-text' when YANK is non-nil."
+  ;; special 'splice value
+  (let ((safe-string
+         (cl-case type
+           (block (lispyville--safe-string-rectangle beg end delete))
+           (t (if (eq delete 'splice)
+                  (lispyville--safe-string-splice beg end)
+                (lispyville--safe-string beg end delete))))))
+    (when yank
+      (lispyville--yank-text safe-string type register yank-handler))
+    safe-string))
 
 (defun lispyville--state-transition (&optional to-special)
   "Transition from lispy special to evil normal state.
@@ -398,20 +357,7 @@ or insert state."
   (interactive "<R><x><y>")
   (let ((evil-was-yanked-without-register
          (and evil-was-yanked-without-register (not register))))
-    (cond ((eq type 'block)
-           (lispyville--safe-manipulate-rectangle beg end nil t
-                                                  register yank-handler))
-          ((eq type 'line)
-           ;; don't include the newline at the end
-           (unless (save-excursion
-                     (goto-char end)
-                     (looking-at "\\'"))
-             (cl-decf end))
-           (lispyville--safe-manipulate beg end nil t
-                                        register 'lispyville--yank-line-handler))
-          (t
-           (lispyville--safe-manipulate beg end nil t
-                                        register yank-handler)))))
+    (lispyville--safe-manipulate beg end type nil t register yank-handler)))
 
 ;; NOTE: Y, D, and C don't work with counts in evil by default already
 (evil-define-operator lispyville-yank-line (beg end type register yank-handler)
@@ -433,7 +379,7 @@ This is not like the default `evil-yank-line'."
     (cond ((eq type 'block)
            (let ((temporary-goal-column most-positive-fixnum)
                  (last-command 'next-line))
-             (lispyville-yank beg end 'block register yank-handler)))
+             (lispyville-yank beg end type register yank-handler)))
           ((eq type 'line)
            (lispyville-yank beg end type register yank-handler))
           (t
@@ -456,35 +402,38 @@ This is not like the default `evil-yank-line'."
         ;; set the small delete register
         (evil-set-register ?- (lispyville--safe-manipulate beg end)))))
   (let ((evil-was-yanked-without-register nil))
-    (cond ((eq type 'block)
-           (lispyville--safe-manipulate-rectangle beg end t t
-                                                  register yank-handler))
-          ((eq type 'line)
-           ;; don't include the newline at the end (deleted later)
-           (unless (save-excursion
-                     (goto-char end)
-                     (looking-at "\\'"))
-             (cl-decf end))
-           (lispyville--safe-manipulate beg end t t
-                                        register 'lispyville--yank-line-handler)
-           (lispyville-first-non-blank)
-           (cond ((lispyville--at-right-p)
-                  ;; (lispy--reindent 1)
-                  (when (save-excursion
-                          (forward-line -1)
-                          (goto-char (line-end-position))
-                          (not (lispy--in-comment-p)))
+    (cl-case type
+      (line
+       (when (and (= end (point-max))
+                  (or (= beg end)
+                      (/= (char-before end) ?\n))
+                  (/= beg (point-min))
+                  (=  (char-before beg) ?\n))
+         (setq beg (1- beg)))
+       (lispyville--safe-manipulate beg end type t t register yank-handler)
+       (when (and (not lispyville-dd-stay-with-closing)
+                  (lispyville--at-right-p)
+                  (lispy-looking-back "^[[:space:]]*")
+                  (save-excursion
                     (forward-line -1)
-                    (lispyville--join-line)
-                    (unless lispyville-dd-stay-with-closing
-                      (forward-line 1))))
-                 (t
-                  (lispyville--join-line)))
-           (unless lispyville-dd-stay-with-closing
-             (evil-first-non-blank))
-           (lispy--indent-for-tab))
-          (t
-           (lispyville--safe-manipulate beg end t t register yank-handler)))))
+                    (goto-char (line-end-position))
+                    (not (lispy--in-comment-p))))
+         (join-line)
+         (evil-insert-newline-below))
+       ;; fix indentation (when closing delimiter(s) on empty line)
+       (lispy--indent-for-tab)
+       (when (lispyville--at-left-p)
+         ;; remove any extra whitespace
+         (save-excursion
+           (lispyville-first-non-blank)
+           (delete-region (point)
+                          (progn
+                            (skip-chars-forward "[:space:]")
+                            (point)))))
+       (when (called-interactively-p 'any)
+         (evil-first-non-blank)))
+      (t
+       (lispyville--safe-manipulate beg end type t t register yank-handler)))))
 
 (evil-define-operator lispyville-delete-line
     (beg end type register yank-handler)
@@ -507,7 +456,9 @@ This is not like the default `evil-yank-line'."
                  (last-command 'next-line))
              (lispyville-delete beg end 'block register yank-handler)))
           ((eq type 'line)
-           (lispyville-delete beg end type register yank-handler))
+           (lispyville-delete beg end type register yank-handler)
+           (when (called-interactively-p 'any)
+             (evil-first-non-blank)))
           (t
            (lispyville-delete beg (line-end-position)
                               type register yank-handler)))))
@@ -524,11 +475,7 @@ This is not like the default `evil-yank-line'."
   "Deletes and copies the region by splicing unmatched delimiters."
   :motion evil-forward-char
   (interactive "<R><x>")
-  (cond ((eq type 'block)
-         (lispyville--rectangle-safe-delete-by-splice beg end t
-                                                      register yank-handler))
-        (t
-         (lispyville--safe-delete-by-splice beg end t register yank-handler))))
+  (lispyville--safe-manipulate beg end type 'splice t register yank-handler))
 
 (evil-define-operator lispyville-delete-char-or-splice-backwards
     (beg end type register yank-handler)
@@ -572,6 +519,7 @@ This will also act as `lispy-delete-backward' after delimiters."
     (beg end type register yank-handler delete-func)
   "Like `evil-change' but will not delete/copy unmatched delimiters."
   (interactive "<R><x><y>")
+  ;; differences from `evil-change' are commented
   (let ((delete-func (or delete-func #'lispyville-delete))
         (nlines (1+ (evil-count-lines beg end)))
         (opoint (save-excursion
@@ -579,22 +527,18 @@ This will also act as `lispy-delete-backward' after delimiters."
                   (line-beginning-position))))
     (unless (eq evil-want-fine-undo t)
       (evil-start-undo-step))
-    (unless (eq type 'line)
+    (let ((lispyville-dd-stay-with-closing t))
       (funcall delete-func beg end type register yank-handler))
-    (cond
-     ((eq type 'line)
-      (unless (save-excursion
-                (goto-char end)
-                (looking-at "\\'"))
-        (cl-decf end))
-      (lispyville--safe-manipulate beg end t t
-                                   register 'lispyville--yank-line-handler)
-      (lispyville-first-non-blank)
-      (lispyville--open-here 1))
-     ((eq type 'block)
-      (evil-insert 1 nlines))
-     (t
-      (evil-insert 1)))))
+    (cl-case type
+      (line
+       (cond ((= opoint (point))
+              (evil-open-above 1))
+             (t
+              (newline-and-indent)
+              (evil-insert 1))))
+      (block (evil-insert 1 nlines))
+      (t
+       (evil-insert 1)))))
 
 (evil-define-operator lispyville-change-line
     (beg end type register yank-handler)
