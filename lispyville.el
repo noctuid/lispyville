@@ -562,6 +562,30 @@ This will also act as `lispy-delete-backward' after delimiters."
   (interactive "<R><x>")
   (lispyville-change beg end type register))
 
+(defun lispyville--forward-list (&optional arg)
+  "Like `forward-list' but error if no more lists.
+ARG has the same effect."
+  (interactive "^p")
+  (or arg (setq arg 1))
+  (let ((pos (scan-lists (point) arg 0)))
+    (if pos
+        (goto-char pos)
+      (error "No more lists"))))
+
+(evil-define-operator lispyville-prettify (beg end)
+  "Prettify lists from BEG to END."
+  (interactive "<r>")
+  (evil-exit-visual-state)
+  (let ((orig-pos (point)))
+    (ignore-errors (backward-up-list))
+    (while (and (ignore-errors (lispyville--forward-list))
+                (<= (save-excursion
+                      (backward-list))
+                    end))
+      (lispy--normalize-1))
+    (or (ignore-errors (goto-char orig-pos))
+        (goto-char (point-max)))))
+
 ;;; * Motions
 ;; ** Additional Movement Key Theme
 (evil-define-motion lispyville-forward-sexp (count)
