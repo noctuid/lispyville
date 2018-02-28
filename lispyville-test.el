@@ -173,6 +173,10 @@ character after it is not considered as part of the region."
     (should (string= (lispyville-with "((\n  |(a b)))\n"
                        "dd")
                      "((\n  |))")))
+  ;; sexp after closing
+  (should (string= (lispyville-with "(let ((a 1)\n      |(b 2))\n  (foo a b))"
+                     "dd")
+                   "(let ((a 1))\n  |(foo a b))"))
   ;; after deletion, at opening delimiter(s)
   (should (string= (lispyville-with "|(a b\n   c)"
                      "dd")
