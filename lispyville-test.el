@@ -160,20 +160,29 @@ character after it is not considered as part of the region."
   (should (string= (lispyville-with "((\n  |(a b)))"
                      "dd")
                    "|(())"))
-  (should (string= (lispyville-with "((\n  |(a b)))\n"
+  (should (string= (lispyville-with "((\n  |(a b)))\n\nfoo"
                      "dd")
-                   "(())\n|"))
+                   ;; shouldn't delete more than one newline
+                   "(())\n|\nfoo"))
   (should (string= (lispyville-with "(\n |(a b)\n (c d))"
                      "2dd")
                    "|()"))
+  (should (string= (lispyville-with "(\n |(a b)\n (c d))\n\nfoo"
+                     ;; shouldn't delete extra newline
+                     "2dd")
+                   "()\n|\nfoo"))
   ;; closing delimiter(s) but comment before
-  (should (string= (lispyville-with "((; comment\n  |(a b)))"
+  (should (string= (lispyville-with "((;; comment\n  |(a b)))"
                      "dd")
-                   "((; comment\n  |))"))
-  (let ((lispyville-dd-stay-with-closing t))
-    (should (string= (lispyville-with "((\n  |(a b)))\n"
-                       "dd")
-                     "((\n  |))")))
+                   "((;; comment\n  |))"))
+  (should (string= (lispyville-with "((;; comment\n  |(a b)))\n\nfoo"
+                     "dd")
+                   ;; should still delete a newline
+                   "((;; comment\n  |))\nfoo"))
+  (should (string= (lispyville-with "((;; comment\n  |(a b)))\nfoo"
+                     "dd")
+                   ;; shouldn't delete a newline if it will pull a sexp up
+                   "((;; comment\n  |))\nfoo"))
   ;; sexp after closing
   (should (string= (lispyville-with "(let ((a 1)\n      |(b 2))\n  (foo a b))"
                      "dd")
@@ -300,16 +309,34 @@ character after it is not considered as part of the region."
                    "|")))
 
 (ert-deftest lispyville-change ()
-  ;; linewise; unlike dd, cc shouldn't bring parens up to previous line
-  (should (string= (lispyville-with "((\n  |(a b)))"
+  ;; linewise; unlike dd, cc should not delete newlines
+  (should (string= (lispyville-with "|foo\n" "cc")
+                   "|\n"))
+  (should (string= (lispyville-with "(((a b)\n  |(c d)\n  (e f)))"
                      "cc")
-                   "((\n  |))"))
-  (should (string= (lispyville-with "(\n  |(a b)\n  (c d))"
+                   "(((a b)\n  |\n  (e f)))"))
+  ;; before closing unmatched delimiter(s)
+  (should (string= (lispyville-with "((\n  |(a b)))\n"
+                     "cc")
+                   "((\n  |))\n"))
+  (should (string= (lispyville-with "(let ((a 1)\n      |(b 2))\n  (foo a b))\n"
+                     "cc")
+                   "(let ((a 1)\n      |)\n  (foo a b))\n"))
+  ;; 2cc should delete one newline
+  (should (string= (lispyville-with "(\n  |(a b)\n  (c d))\n"
                      "2cc")
-                   "(\n |)"))
+                   "(\n |)\n"))
+  ;; before opening unmatched delimiters(s)
+  (should (string= (lispyville-with "a\n|(b\n c)\n" "cc")
+                   "a\n(|\n c)\n"))
+  (should (string= (lispyville-with "a\n(b|\n c)\n" "cc")
+                   "a\n(|\n c)\n"))
   ;; test that works at end of buffer
   (should (string= (lispyville-with "|(a b)" "cc")
                    "|\n"))
+  ;; should not pull up opening delimiter
+  (should (string= (lispyville-with "a|\n(b)\n" "cc")
+                   "|\n(b)\n"))
   ;; test that undo is one step (evil-want-fine-undo nil)
   (should (string= (lispyville-with "(defvar foo\n  bar baz)|"
                      (concat "cchello" (kbd "ESC") "u"))
@@ -320,9 +347,9 @@ character after it is not considered as part of the region."
 ;;   )
 
 (ert-deftest lispyville-change-whole-line ()
-  (should (string= (lispyville-with "((\n  |(a b)))"
+  (should (string= (lispyville-with "((\n  |(a b)))\n"
                      "S")
-                   "((\n  |))")))
+                   "((\n  |))\n")))
 
 (ert-deftest lispyville-substitute ()
   (should (string= (lispyville-with "|(a)"

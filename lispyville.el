@@ -76,12 +76,6 @@ visual state."
 canceling a region."
               mark-toggle))))
 
-(defcustom lispyville-dd-stay-with-closing nil
-  "When non-nil, don't move closing delimiters after dd (`lispyville-delete').
-This prevents dd from moving closing delimiters on an empty line by themselves
-to the previous line."
-  :group 'lispyville
-  :type 'boolean)
 
 (defcustom lispyville-barf-stay-with-closing nil
   "When non-nil, stay with the closing delimiter when barfing.
@@ -386,12 +380,18 @@ This is not like the default `evil-yank-line'."
            (lispyville-yank beg (line-end-position)
                             type register yank-handler)))))
 
-(defun lispyville--join-line ()
-  "Like `join-line' but don't alter whitespace."
+(defun lispyville--maybe-newline-and-indent ()
+  "Skip closing delimiters and call `newline-and-indent' with a trailing sexp.
+Only add a newline if there is a sexp after the closing delimiters. Don't move
+the point."
   (save-excursion
-    (forward-line 1)
-    (when (eq (preceding-char) ?\n)
-      (delete-region (point) (1- (point))))))
+    (while (progn (forward-char)
+                  (lispyville--at-right-p)))
+    (unless (looking-at "[[:space:]]*$")
+      (newline-and-indent))))
+
+(defvar lispyville--cc nil
+  "Whether `lispyville-delete' has been called from `lispyville-change'.")
 
 (evil-define-operator lispyville-delete (beg end type register yank-handler)
   "Like `evil-delete' but will not delete/copy unmatched delimiters."
@@ -402,40 +402,48 @@ This is not like the default `evil-yank-line'."
         ;; set the small delete register
         (evil-set-register ?- (lispyville--safe-manipulate beg end)))))
   (let ((evil-was-yanked-without-register nil))
-    (cl-case type
-      (line
-       (when (and (= end (point-max))
-                  (or (= beg end)
-                      (/= (char-before end) ?\n))
-                  (/= beg (point-min))
-                  (=  (char-before beg) ?\n))
-         (setq beg (1- beg)))
-       (lispyville--safe-manipulate beg end type t t register yank-handler)
-       (when (and (not lispyville-dd-stay-with-closing)
-                  (lispyville--at-right-p)
-                  (lispy-looking-back "^[[:space:]]*")
-                  (save-excursion
-                    (forward-line -1)
-                    (goto-char (line-end-position))
-                    (not (lispy--in-comment-p))))
-         (join-line)
-         (while (progn (forward-char)
-                       (lispyville--at-right-p)))
-         (newline-and-indent))
-       ;; fix indentation (when closing delimiter(s) on empty line)
-       (lispy--indent-for-tab)
-       (when (lispyville--at-left-p)
-         ;; remove any extra whitespace
-         (save-excursion
-           (lispyville-first-non-blank)
-           (delete-region (point)
-                          (progn
-                            (skip-chars-forward "[:space:]")
-                            (point)))))
-       (when (called-interactively-p 'any)
-         (evil-first-non-blank)))
-      (t
-       (lispyville--safe-manipulate beg end type t t register yank-handler)))))
+    (cond
+     ((and (eq type 'line)
+           (not lispyville--cc))
+      ;; at end of buffer delete previous newline since no newline after
+      ;; current line
+      (when (and
+             ;; check that there is no final newline
+             (= end (point-max))
+             (or (= beg end)
+                 (/= (char-before end) ?\n))
+             ;; there must be a previous newline
+             (/= beg (point-min))
+             (= (char-before beg) ?\n))
+        (setq beg (1- beg)))
+      (lispyville--safe-manipulate beg end type t t register yank-handler)
+      (when (and (lispyville--at-right-p)
+                 (lispy-looking-back "^[[:space:]]*"))
+        (cond ((save-excursion
+                 (forward-line -1)
+                 (goto-char (line-end-position))
+                 (lispy--in-comment-p))
+               (lispy--indent-for-tab)
+               ;; don't pull delimiter(s) into comment
+               (lispyville--maybe-newline-and-indent))
+              (t
+               (join-line)
+               (while (progn (forward-char)
+                             (lispyville--at-right-p)))
+               (newline-and-indent))))
+      (when (lispyville--at-left-p)
+        ;; remove any extra whitespace (e.g. unmatched opening delimeter;
+        ;; pulling up indented code)
+        (save-excursion
+          (lispyville-first-non-blank)
+          (delete-region (point)
+                         (progn
+                           (skip-chars-forward "[:space:]")
+                           (point)))))
+      (when (called-interactively-p 'any)
+        (evil-first-non-blank)))
+     (t
+      (lispyville--safe-manipulate beg end type t t register yank-handler)))))
 
 (evil-define-operator lispyville-delete-line
     (beg end type register yank-handler)
@@ -526,14 +534,31 @@ This will also act as `lispy-delete-backward' after delimiters."
         (nlines (1+ (evil-count-lines beg end)))
         (opoint (save-excursion
                   (goto-char beg)
-                  (line-beginning-position))))
+                  (line-beginning-position)))
+        (unmatched (lispy--find-unmatched-delimiters
+                    (line-beginning-position)
+                    (line-end-position)))
+        (lispyville--cc t))
     (unless (eq evil-want-fine-undo t)
       (evil-start-undo-step))
-    (let ((lispyville-dd-stay-with-closing t))
-      (funcall delete-func beg end type register yank-handler))
+    (funcall delete-func beg end type register yank-handler)
     (cl-case type
       (line
-       (cond ((= opoint (point))
+       (cond ((lispyville--at-right-p)
+              (lispy--indent-for-tab)
+              (save-excursion
+                (while (progn (forward-char)
+                              (lispyville--at-right-p)))
+                (newline-and-indent))
+              (evil-insert 1))
+             ((and unmatched
+                   (lispyville--at-left-p))
+              (while (progn (forward-char)
+                            (lispyville--at-left-p)))
+              (save-excursion
+                (newline-and-indent))
+              (evil-insert 1))
+             ((= opoint (point))
               (evil-open-above 1))
              (t
               (newline-and-indent)
