@@ -2,6 +2,7 @@
 
 (setq lispyville-key-theme '(operators
                              s-operators
+                             prettify
                              c-w
                              additional-movement
                              slurp/barf-cp
@@ -330,6 +331,12 @@ character after it is not considered as part of the region."
   (should (string= (lispyville-with "(|a)"
                      "s")
                    "(|)")))
+
+(ert-deftest lispyville-prettify ()
+  ;; should work in the basic case
+  (should (string= (lispyville-with "(foo\n |a\n )"
+                     "=G")
+                   "(foo\n |a)")))
 
 ;;; Commands/Motions
 (ert-deftest lispyville-first-non-blank ()

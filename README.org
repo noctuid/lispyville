@@ -100,6 +100,13 @@ The reason no safe version of ~evil-delete-backward-char-and-join~ is provided i
 |-------------------------------------+------------------------------------|
 | =[remap evil-delete-backward-word]= | ~lispyville-delete-backward-word~  |
 
+** Prettify Key Theme
+The corresponding symbol is =prettify=. There are no default states; any state where ~evil-indent~ is bound will be affected. This key theme replaces ~evil-indent~ with an operator equivalent of ~lispy-tab~. In addition to correcting indentation, ~lispy-tab~ will also, for example, remove empty newlines and pull trailing closing delimiters all onto the same line. This operator works by normalizing the current list and all subsequent same-level lists that start within the region.
+
+| key                   | command               |
+|-----------------------+-----------------------|
+| =[remap evil-indent]= | ~lispyville-prettify~ |
+
 ** Additional Movement Key Theme
 The corresponding symbol is =additional-movement=. The default state is motion (inherited in the normal, visual, and operator states). This key theme is the equivalent of cleverparen's additional movement keys. =[= and =]= are like the reverse of ~lispy-flow~. ={= and =}= are like ~lispy-flow~. =(= and =)= are like ~lispy-left~ and ~lispy-right~. Also see [[https://github.com/noctuid/lispyville#more-fluid-transitioning-between-normal-state-and-special][here]] for some extra information on automatically enter special after executing these motions.
 

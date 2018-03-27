@@ -576,17 +576,17 @@ ARG has the same effect."
 
 (evil-define-operator lispyville-prettify (beg end)
   "Prettify lists from BEG to END."
+  :move-point nil
   (interactive "<r>")
-  (evil-exit-visual-state)
   (let ((orig-pos (point)))
+    (evil-exit-visual-state)
     (ignore-errors (backward-up-list))
     (while (and (ignore-errors (lispyville--forward-list))
                 (<= (save-excursion
                       (backward-list))
                     end))
       (lispy--normalize-1))
-    (or (ignore-errors (goto-char orig-pos))
-        (goto-char (point-max)))))
+    (goto-char orig-pos)))
 
 ;;; * Motions
 ;; ** Additional Movement Key Theme
@@ -1001,6 +1001,11 @@ When THEME is not given, `lispville-key-theme' will be used instead."
          (lispyville--define-key states
            [remap evil-delete-backward-word]
            #'lispyville-delete-backward-word))
+        (prettify
+         ;; no states necessary for remaps
+         ;; (or states (setq states 'normal))
+         (lispyville--define-key states
+           [remap evil-indent] #'lispyville-prettify))
         (additional-movement
          (or states (setq states 'motion))
          (lispyville--define-key states
