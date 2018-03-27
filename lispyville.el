@@ -972,87 +972,88 @@ marking something using a command like `lispy-mark' from special."
 (defun lispyville-set-key-theme (&optional theme)
   "Binds keys in lispyville-mode-map according to THEME.
 When THEME is not given, `lispville-key-theme' will be used instead."
-  (unless theme (setq theme lispyville-key-theme))
+  (or theme (setq theme lispyville-key-theme))
   (dolist (item theme)
     (let ((type (if (listp item)
                     (car item)
                   item))
           (states (when (listp item)
                     (cdr item))))
-      (cond ((eq type 'operators)
-             ;; no states necessary for remaps
-             ;; (setq states (or states 'normal))
-             (lispyville--define-key states
-               [remap evil-yank] #'lispyville-yank
-               [remap evil-delete] #'lispyville-delete
-               [remap evil-change] #'lispyville-change
-               [remap evil-yank-line] #'lispyville-yank-line
-               [remap evil-delete-line] #'lispyville-delete-line
-               [remap evil-change-line] #'lispyville-change-line
-               [remap evil-delete-char] #'lispyville-delete-char-or-splice
-               [remap evil-delete-backward-char]
-               #'lispyville-delete-char-or-splice-backwards
-               [remap evil-substitute] #'lispyville-substitute
-               [remap evil-change-whole-line] #'lispyville-change-whole-line))
-            ((eq type 'c-w)
-             ;; no states necessary for remaps
-             ;; (setq states (or states '(insert emacs)))
-             (lispyville--define-key states
-               [remap evil-delete-backward-word]
-               #'lispyville-delete-backward-word))
-            ((eq type 'additional-movement)
-             (setq states (or states 'motion))
-             (lispyville--define-key states
-               "H" #'lispyville-backward-sexp
-               "L" #'lispyville-forward-sexp
-               (kbd "M-h") #'lispyville-beginning-of-defun
-               (kbd "M-l") #'lispyville-end-of-defun
-               ;; reverse of lispy-flow
-               "[" #'lispyville-previous-opening
-               "]" #'lispyville-next-closing
-               ;; like lispy-flow
-               "{" #'lispyville-next-opening
-               "}" #'lispyville-previous-closing
-               ;; like lispy-left and lispy-right
-               "(" #'lispyville-backward-up-list
-               ")" #'lispyville-up-list))
-            ((eq type 'slurp/barf-cp)
-             (setq states (or states 'normal))
-             (lispyville--define-key states
-               ">" #'lispyville->
-               "<" #'lispyville-<))
-            ((eq type 'slurp/barf-lispy)
-             (setq states (or states 'normal))
-             (lispyville--define-key states
-               ">" #'lispyville-slurp
-               "<" #'lispyville-barf))
-            ((eq type 'additional)
-             (setq states (or states '(normal visual)))
-             (lispyville--define-key states
-               (kbd "M-j") #'lispyville-drag-forward
-               (kbd "M-k") #'lispyville-drag-backward))
-            ((eq type 'escape)
-             (setq states (or states '(insert emacs)))
-             (lispyville--define-key states
-               (kbd "<escape>") #'lispyville-normal-state))
-            ((eq type 'mark)
-             (setq states (or states '(normal visual)))
-             (lispyville--define-key states
-               "v" (lispyville-wrap-command lispy-mark-symbol visual)
-               "V" (lispyville-wrap-command lispy-mark visual)
-               (kbd "C-v") #'lispyville-wrap-lispy-mark-visual))
-            ((eq type 'mark-special)
-             (setq states (or states '(normal visual)))
-             (lispyville--define-key states
-               "v" (lispyville-wrap-command lispy-mark-symbol special)
-               "V" (lispyville-wrap-command lispy-mark special)
-               (kbd "C-v") #'lispyville-wrap-lispy-mark-special))
-            ((eq type 'mark-toggle)
-             (setq states (or states '(insert emacs)))
-             (lispyville--define-key 'visual
-               "v" #'lispyville-toggle-mark-type)
-             (lispyville--define-key states
-               (kbd "<escape>") #'lispyville-escape))))))
+      (cl-case type
+        (operators
+         ;; no states necessary for remaps
+         ;; (setq states (or states 'normal))
+         (lispyville--define-key states
+           [remap evil-yank] #'lispyville-yank
+           [remap evil-delete] #'lispyville-delete
+           [remap evil-change] #'lispyville-change
+           [remap evil-yank-line] #'lispyville-yank-line
+           [remap evil-delete-line] #'lispyville-delete-line
+           [remap evil-change-line] #'lispyville-change-line
+           [remap evil-delete-char] #'lispyville-delete-char-or-splice
+           [remap evil-delete-backward-char]
+           #'lispyville-delete-char-or-splice-backwards
+           [remap evil-substitute] #'lispyville-substitute
+           [remap evil-change-whole-line] #'lispyville-change-whole-line))
+        (c-w
+         ;; no states necessary for remaps
+         ;; (setq states (or states '(insert emacs)))
+         (lispyville--define-key states
+           [remap evil-delete-backward-word]
+           #'lispyville-delete-backward-word))
+        (additional-movement
+         (or states (setq states 'motion))
+         (lispyville--define-key states
+           "H" #'lispyville-backward-sexp
+           "L" #'lispyville-forward-sexp
+           (kbd "M-h") #'lispyville-beginning-of-defun
+           (kbd "M-l") #'lispyville-end-of-defun
+           ;; reverse of lispy-flow
+           "[" #'lispyville-previous-opening
+           "]" #'lispyville-next-closing
+           ;; like lispy-flow
+           "{" #'lispyville-next-opening
+           "}" #'lispyville-previous-closing
+           ;; like lispy-left and lispy-right
+           "(" #'lispyville-backward-up-list
+           ")" #'lispyville-up-list))
+        (slurp/barf-cp
+         (or states (setq states 'normal))
+         (lispyville--define-key states
+           ">" #'lispyville->
+           "<" #'lispyville-<))
+        (slurp/barf-lispy
+         (or states (setq states 'normal))
+         (lispyville--define-key states
+           ">" #'lispyville-slurp
+           "<" #'lispyville-barf))
+        (additional
+         (or states (setq states '(normal visual)))
+         (lispyville--define-key states
+           (kbd "M-j") #'lispyville-drag-forward
+           (kbd "M-k") #'lispyville-drag-backward))
+        (escape
+         (or states (setq states '(insert emacs)))
+         (lispyville--define-key states
+           (kbd "<escape>") #'lispyville-normal-state))
+        (mark
+         (or states (setq states '(normal visual)))
+         (lispyville--define-key states
+           "v" (lispyville-wrap-command lispy-mark-symbol visual)
+           "V" (lispyville-wrap-command lispy-mark visual)
+           (kbd "C-v") #'lispyville-wrap-lispy-mark-visual))
+        (mark-special
+         (or states (setq states '(normal visual)))
+         (lispyville--define-key states
+           "v" (lispyville-wrap-command lispy-mark-symbol special)
+           "V" (lispyville-wrap-command lispy-mark special)
+           (kbd "C-v") #'lispyville-wrap-lispy-mark-special))
+        (mark-toggle
+         (or states (setq states '(insert emacs)))
+         (lispyville--define-key 'visual
+           "v" #'lispyville-toggle-mark-type)
+         (lispyville--define-key states
+           (kbd "<escape>") #'lispyville-escape))))))
 
 (lispyville-set-key-theme)
 
