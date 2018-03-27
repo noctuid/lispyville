@@ -47,7 +47,7 @@ I've added this functionality directly to lispy, and if you want lispy's copy, d
 * Key Themes
 By default, the only keys that lispyville remaps are the operators and =C-w=. To allow for the user to choose between various sets of keybindings without making them manually remap every command, lispyville provides "key themes" similarly to how lispy does.
 
-The user can still define commands in =lispyville-mode= using ~evil-define-key~ or something like [[https://github.com/noctuid/general.el][general]], but ~lispyville-set-key-theme~ can also be used to define keys. It takes one argument which is a list of symbols corresponding to the different themes. By default, most commands will be mapped in normal and visual state. The default states are listed below. To change them, a list of the symbol and the states to map the keys in can be used instead.
+The user can still define commands in =lispyville-mode= using ~evil-define-key~ or something like [[https://github.com/noctuid/general.el][general]], but ~lispyville-set-key-theme~ can also be used to define keys. It takes one argument which is a list of symbols corresponding to the different themes. By default, most commands will be mapped in the normal (and visual) state. The default states are listed below. To change them, a list of the key theme symbol and the states to map the keys in can be specified instead.
 
 As an example, the following command will map the "operators" theme in the normal and visual states, the "escape" theme in just the insert state, and the "additional-movement" theme in the normal, visual, and motion states:
 #+begin_src emacs-lisp
@@ -59,10 +59,24 @@ As an example, the following command will map the "operators" theme in the norma
      (additional-movement normal visual motion))))
 #+end_src
 
+Note that you will generally not need to change the states. It is usually unnecessary to bind keys in both normal and visual state because keys bound in normal state are inherited in visual state. Similarly, keys bound in motion state are inherited in the normal and visual (and operator) states. As an example, the =)= motion is bound only in ~evil-motion-state-map~. The lispyville =)= motion is also only bound in motion state. However, if you were to bind a custom =)= motion in =evil-visual-state-map=, for example, it would override lispyville's =)=. Most users will not have to worry about this issue as this customization is unlikely to be useful (more likely it would come as the result of the user or some package unnecessarily binding a motion in visual state), but this is a case where you would need to alter the states if you wanted lispyville's motion to have precedence:
+#+begin_src emacs-lisp
+(evil-define-key 'visual 'global
+  ")" #'my-custom-motion)
+
+;; if `lispyville-up-list' should be used instead of `my-custom-motion' in
+;; visual state when `lispyville-mode' is active:
+(lispyville-set-key-theme '((additional-movement motion visual)))
+;; or just
+(evil-define-key 'visual lispyville-mode-map
+  ")" #'lispyville-up-list)
+#+end_src
+If you find yourself having to do this because a package explicitly binds motions in normal or visual state, you should probably make an issue for that package. Finally, note that this is not applicable when =[remap]= is used. For key themes that use =[remap]=, the states do not matter.
+
 ~lispyville-set-key-theme~ will not reset lispyville's keymap, so it will not remove user-defined keybindings (unless they are overwritten by a key in one of the themes). The keybindings will be added in the order of the list, so if there is overlap between the listed themes, the one listed last will take precedence.
 
 ** Operators Key Theme
-The corresponding symbol is =operators=. The default state is normal. These are safe versions of the corresponding evil operators that won't unbalance parentheses. Like with cleverparens, =dd= will bring closing delimiters that are on a line by themselves to the previous line while =cc= won't. To disable this behavior for =dd=, =lispyville-dd-stay-with-closing= can be set to a non-nil value.
+The corresponding symbol is =operators=. There are no default states; any state where these operators are bound will be affected. These are safe versions of the corresponding evil operators that won't unbalance parentheses. Like with cleverparens, =dd= will bring closing delimiters that are on a line by themselves to the previous line while =cc= won't. To disable this behavior for =dd=, =lispyville-dd-stay-with-closing= can be set to a non-nil value.
 
 | key                                 | command                                      |
 |-------------------------------------+----------------------------------------------|
@@ -78,7 +92,7 @@ The corresponding symbol is =operators=. The default state is normal. These are 
 | =[remap evil-change-whole-line]=    | ~lispyville-change-whole-line~               |
 
 ** C-w Key Theme
-The corresponding symbol is =c-w=. The default states are emacs and insert. This is the safe version of ~evil-delete-backward-word~. It will act as ~lispy-delete-backward~ after delimiters (and delete everything within the delimiters).
+The corresponding symbol is =c-w=. There are no default states; any state where ~evil-delete-backward-word~ is bound will be affected. This is the safe version of ~evil-delete-backward-word~. It will act as ~lispy-delete-backward~ after delimiters (and delete everything within the delimiters).
 
 The reason no safe version of ~evil-delete-backward-char-and-join~ is provided is because lispy already maps =DEL= to ~lispy-delete-backward~.
 

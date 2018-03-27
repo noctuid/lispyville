@@ -980,7 +980,8 @@ When THEME is not given, `lispville-key-theme' will be used instead."
           (states (when (listp item)
                     (cdr item))))
       (cond ((eq type 'operators)
-             (setq states (or states 'normal))
+             ;; no states necessary for remaps
+             ;; (setq states (or states 'normal))
              (lispyville--define-key states
                [remap evil-yank] #'lispyville-yank
                [remap evil-delete] #'lispyville-delete
@@ -994,7 +995,8 @@ When THEME is not given, `lispville-key-theme' will be used instead."
                [remap evil-substitute] #'lispyville-substitute
                [remap evil-change-whole-line] #'lispyville-change-whole-line))
             ((eq type 'c-w)
-             (setq states (or states '(insert emacs)))
+             ;; no states necessary for remaps
+             ;; (setq states (or states '(insert emacs)))
              (lispyville--define-key states
                [remap evil-delete-backward-word]
                #'lispyville-delete-backward-word))
