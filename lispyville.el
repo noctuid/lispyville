@@ -44,39 +44,40 @@ called afterwards with no arguments. The user can also not set this variable
 at all and simply use `lispyville-set-key-theme' with an argument after
 lispyville has been loaded."
   :group 'lispyville
-  :type '(repeat :tag "Key Themes"
-           (choice
-            (const :tag "Safe versions of evil operators."
-              operators)
-            (const :tag "Safe versions of the s and S operators."
-              s-operators)
-            (const
-             :tag "Extra motions similar to those given by cleverparens."
-              additional-movement)
-            (const
-             :tag "Slurp/barf keybindings in the style of cleverparens."
-              slurp/barf-cp)
-            (const
-             :tag "Slurp/barf keybindings in the style of lispy."
-              slurp/barf-lispy)
-            (const
-             :tag "Extra commands similar to those given by cleverparens."
-              additional)
-            (const
-             :tag "Command to enter normal state and cancel an active region."
-              escape)
-            (const
-             :tag "Lispy commands for marking."
-              mark)
-            (const
-             :tag "Lispy commands for marking that enter special instead of
-visual state."
-              mark-special)
-            (const
-             :tag "Commands for toggling between special and visual state and
+  :type
+  '(repeat :tag "Key Themes"
+     (choice
+      (const
+       :tag "Safe versions of evil operators."
+       operators)
+      (const
+       :tag "Safe versions of the s and S operators."
+       s-operators)
+      (const
+       :tag "Extra motions similar to those provided by cleverparens."
+       additional-movement)
+      (const
+       :tag "Slurp/barf keybindings in the style of cleverparens."
+       slurp/barf-cp)
+      (const
+       :tag "Slurp/barf keybindings in the style of lispy."
+       slurp/barf-lispy)
+      (const
+       :tag "Extra commands similar to those provided by cleverparens."
+       additional)
+      (const
+       :tag "Command to enter normal state and cancel an active region."
+       escape)
+      (const
+       :tag "Lispy commands for marking."
+       mark)
+      (const
+       :tag "Lispy commands for marking that enter special instead of visual state."
+       mark-special)
+      (const
+       :tag "Commands for toggling between special and visual state and
 canceling a region."
-              mark-toggle))))
-
+       mark-toggle))))
 
 (defcustom lispyville-barf-stay-with-closing nil
   "When non-nil, stay with the closing delimiter when barfing.
@@ -126,7 +127,7 @@ to a non-nil value."
 
 ;;;###autoload
 (define-minor-mode lispyville-mode
-    "A minor mode for integrating evil with lispy."
+  "A minor mode for integrating evil with lispy."
   :lighter " LYVLE"
   :keymap (make-sparse-keymap)
   (when lispyville-mode
@@ -447,7 +448,7 @@ the point."
       (lispyville--safe-manipulate beg end type t t register yank-handler)))))
 
 (evil-define-operator lispyville-delete-line
-    (beg end type register yank-handler)
+  (beg end type register yank-handler)
   "Like `evil-delete-line' but will not delete/copy unmatched delimiters."
   :motion nil
   :keep-visual t
@@ -475,7 +476,7 @@ the point."
                               type register yank-handler)))))
 
 (evil-define-operator lispyville-delete-whole-line
-    (beg end type register yank-handler)
+  (beg end type register yank-handler)
   "Like `evil-delete-whole-line' but will not delete/copy unmatched delimiters."
   :motion evil-line
   (interactive "<R><x>")
@@ -489,7 +490,7 @@ the point."
   (lispyville--safe-manipulate beg end type 'splice t register yank-handler))
 
 (evil-define-operator lispyville-delete-char-or-splice-backwards
-    (beg end type register yank-handler)
+  (beg end type register yank-handler)
   "Like `lispyville-delete-char-or-splice' but acts on the preceding character."
   :motion evil-backward-char
   (interactive "<R><x>")
@@ -527,7 +528,7 @@ This will also act as `lispy-delete-backward' after delimiters."
     (indent-according-to-mode)))
 
 (evil-define-operator lispyville-change
-    (beg end type register yank-handler delete-func)
+  (beg end type register yank-handler delete-func)
   "Like `evil-change' but will not delete/copy unmatched delimiters."
   (interactive "<R><x><y>")
   ;; differences from `evil-change' are commented
@@ -569,7 +570,7 @@ This will also act as `lispy-delete-backward' after delimiters."
        (evil-insert 1)))))
 
 (evil-define-operator lispyville-change-line
-    (beg end type register yank-handler)
+  (beg end type register yank-handler)
   "Like `evil-change-line' but will not delete/copy unmatched delimiters."
   :motion evil-end-of-line
   (interactive "<R><x><y>")
@@ -577,7 +578,7 @@ This will also act as `lispy-delete-backward' after delimiters."
                      #'lispyville-delete-line))
 
 (evil-define-operator lispyville-change-whole-line
-    (beg end type register yank-handler)
+  (beg end type register yank-handler)
   "Change whole line while respecting parentheses."
   :motion evil-line
   (interactive "<R><x>")
