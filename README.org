@@ -5,21 +5,26 @@ The =operators= key theme now remaps commands instead of directly binding keys, 
 * About LispyVille
 Welcome to LispyVille!
 
-=lispyville.el='s main purpose is to provide a lisp-editing environment suited towards evil users. It can serve as a minimal layer on top of =lispy-mode= for better integration with evil, but it does not require use of lispy's keybinding style. The provided commands allow for editing lisp in normal state and will work even without =lispy-mode= enabled.
+=lispyville.el='s main purpose is to provide a lisp-editing environment suited towards evil users. It can serve as a minimal layer on top of =lispy-mode= for better integration with evil, but it does not require use of lispy's keybinding style. The provided commands allow for editing lisp in normal state and will work even without =lispy-mode= enabled. If you are just looking for a way to prevent evil's operators from unbalancing parentheses, you can enable ~lispyville-mode~ in your configuration and just ignore the rest of its features.
 
 Here are the main features of lispyville:
 - Provides "safe" versions of vim's yank, delete, and change related operators that won't unbalance parentheses
-- Provides lisp-related motions/commands
-- Integrates evil with lispy by providing commands to more easily switch between normal state and special and by providing options for integrating visual state with lispy's special
+- Provides lisp-related evil operators, commands, motions, and text objects
+- Integrates evil with lispy by providing commands to more easily switch between normal state and lispy's "special" context/mode and by providing options for integrating visual state with lispy's special region mode
 
 Note that this package does not create any new evil states; it assumes that the user will be using lispy in insert or emacs state.
 
-* Comparison With Evil Cleverparens
+* Comparison with Evil Cleverparens
 =lispyville.el= has a similar intent to [[https://github.com/luxbock/evil-cleverparens][evil-cleverparens]] and related packages. It creates "safe" versions of standard evil editing commands. For example, it ensures that =dd= will not unbalance parenthesis but instead only delete the "safe" portion of the line. This allows the evil's line-oriented commands to become far more useful for lisps.
 
-The primary difference between lispyville and other similar packages is that it uses [[https://github.com/abo-abo/lispy][lispy]] instead of smartparens or paredit. This matters because lispyville is primarily intended to be used in conjunction with lispy. Lispy already has a lot in common with evil. Unlike smartparens and paredit, lispy's primary keybindings are just letters. It may help to think of lispy as just an additional evil state. The main difference is that you can automatically enter and exit it without having to use =ESC=.
+The primary difference between lispyville and other similar packages is that it uses [[https://github.com/abo-abo/lispy][lispy]] instead of smartparens or paredit. This matters because lispyville is primarily intended to be used in conjunction with lispy. Lispy already has a lot in common with evil. Unlike smartparens and paredit, lispy's primary keybindings are just letters. It may help to think of lispy as just an additional evil state. The main difference from an evil state is that lispy's "special" is contextually based on the point (special is when the point is before an opening delimiter, after a closing delimiter, or when there is an active region).
 
 However, if you'd rather stick to mainly vim keybindings, lispyville will also eventually provide "key themes" to replicate all of evil-cleveparens' keybindings as well as the keybindings of some other popular evil/lisp editing packages. I also plan to add key themes that are more similar to lispy's keybindings.
+
+The other main reason I created this package is that I found the implementation of safe operators in other packages to be confusing and buggy. Lispyville uses a simple/clear method of acting on regions with unmatched delimiters and attempts to intelligently handle all edge cases. Please make an issue if you find any abnormalities or have any suggestions for improvement.
+
+
+Finally, note that although smartparens is generic and lispy is meant for lisps, this package's safe operators should work correctly in non-lisp modes as well. If you encounter any problems or would like a separate mode dedicated for non-lisp modes, feel free to make an issue.
 
 * Relationship with Lispy
 While lispyville can be used without =lispy-mode=, some additional setup may be required to make editing lisp comfortable. For example, =(= would need to be explicitly bound to ~lispy-parens~ for auto-pairing behavior (and the other functionality provided by ~lispy-pair~). If your gripe with lispy is its style of having "special" locations where letter keys act as commands, you can still use =lispy-mode= for the "normal" keybindings it provides by not using =special= in your lispy "key theme":
@@ -35,6 +40,14 @@ Lispyville is a minor mode. To enable it wherever lispy is enabled, you can add 
 #+begin_src emacs-lisp
 (add-hook 'lispy-mode-hook #'lispyville-mode)
 #+end_src
+
+Lispyville can also be used without lispy:
+#+begin_src emacs-lisp
+(add-hook 'emacs-lisp-mode-hook #'lispyville-mode)
+(add-hook 'lisp-mode-hook #'lispyville-mode)
+;; ...
+#+end_src
+
 * Safe Operators
 The operators behave similarly to evil-cleverparens' operators with a few exceptions. The delete operator will always act safely by ignoring unmatched delimiters, whereas cleverparens will sometimes splice. While cleverparens' yank operators will attempt to add unmatched delimiters, lispyville's yank operators will simply exclude the unmatched delimiters, which is consistent with how the delete operator works. The operators will also work in visual block mode, unlike with cleverparens. The user can also choose whether or not they want to act safely on delimiters in strings and comments (see [[#lispy-settings][Lispy Settings]]).
 
