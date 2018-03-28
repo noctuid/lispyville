@@ -30,6 +30,7 @@
 (require 'lispy)
 (require 'cl-lib)
 
+;; * Settings
 (defgroup lispyville nil
   "Provides a minor mode to integrate evil with lispy."
   :group 'lispy
@@ -136,7 +137,7 @@ to a non-nil value."
             lispy-safe-paste t
             lispy-safe-actions-no-pull-delimiters-into-comments t))))
 
-;;; * Helpers
+;; * Helpers
 (defun lispyville--in-string-p ()
   "Return whether the point is in a string.
 Unlike `lispy--in-string-p', |\"\" is not considered to be inside the string."
@@ -343,7 +344,7 @@ or insert state."
                       (evil-visual-state-p))))
     (lispyville--state-transition t)))
 
-;;; * Operators
+;; * Operators
 (evil-define-operator lispyville-yank (beg end type register yank-handler)
   "Like `evil-yank' but will not copy unmatched delimiters."
   :move-point nil
@@ -613,7 +614,7 @@ ARG has the same effect."
       (lispy--normalize-1))
     (goto-char orig-pos)))
 
-;;; * Motions
+;; * Motions
 ;; ** Additional Movement Key Theme
 (evil-define-motion lispyville-forward-sexp (count)
   "This is an evil motion equivalent of `forward-sexp'."
@@ -722,7 +723,7 @@ on outlines. Unlike `up-list', it will keep the point on the closing delimiter."
 
 (defalias 'lispyville-right 'lispyville-up-list)
 
-;;; * Commands
+;; * Commands
 ;; TODO make motion
 (defun lispyville-first-non-blank ()
   "Like `evil-first-non-blank' but skips opening delimiters.
@@ -873,7 +874,7 @@ This is the lispyville equivalent of `lispy-move-up' and
 
 (defalias 'lispyville-move-up 'lispyville-drag-backward)
 
-;;; * Integration Between Visual State and Lispy's Special Mark State
+;; * Integration Between Visual State and Lispy's Special Mark State
 ;; ** Using Both Separately
 (defun lispyville-normal-state ()
   "The same as `evil-normal-state' but won't ever enter visual state.
@@ -986,7 +987,7 @@ marking something using a command like `lispy-mark' from special."
   (remove-hook 'evil-visual-state-entry-hook #'lispyville--enter-special)
   (remove-hook 'activate-mark-hook #'lispyville--enter-visual))
 
-;;; * Keybindings
+;; * Keybindings
 ;; TODO update evil dependency on next release (evil-define-key*)
 (defun lispyville--define-key (states &rest maps)
   "Helper function for defining keys in `lispyville-mode-map'."
