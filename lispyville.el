@@ -117,6 +117,11 @@ to a non-nil value."
   :group 'lispyville
   :type 'boolean)
 
+(defcustom lispyville-insert-states '(insert emacs hybrid iedit-insert)
+  "States "
+  :group 'lispyvilles
+  :type 'list)
+
 (with-eval-after-load 'evil-surround
   (add-to-list 'evil-surround-operator-alist '(lispyville-change . change))
   (add-to-list 'evil-surround-operator-alist '(lispyville-delete . delete)))
@@ -164,6 +169,13 @@ Closing delimiters inside strings and comments are ignored."
            (and (looking-at "\"")
                 (lispyville--in-string-p)))
        (not (looking-back "\\\\" (- (point) 2)))))
+
+(defun lispyville--after-left-p ()
+  "Return whether the point is after an opening delimiters.
+Opening delimiters inside strings and comments are ignored."
+  (save-excursion
+    (backward-char)
+    (lispyville--at-left-p)))
 
 (defun lispyville--after-delimiter-p ()
   "Return whether the point is after an opening or closing delimiter."
@@ -926,7 +938,7 @@ run in lispy special without an active region or when it is not the default 1."
   (if (region-active-p)
       (cond ((evil-visual-state-p)
              (lispyville--state-transition t))
-            ((memq evil-state '(insert emacs hybrid iedit-insert))
+            ((memq evil-state lispyville-insert-states)
              (cond ((= arg 1)
                     (setq lispyville--inhibit-next-special-force t)
                     (lispyville--state-transition))
@@ -987,6 +999,51 @@ marking something using a command like `lispy-mark' from special."
   (interactive)
   (remove-hook 'evil-visual-state-entry-hook #'lispyville--enter-special)
   (remove-hook 'activate-mark-hook #'lispyville--enter-visual))
+
+;; * Insert Key Theme
+(defun lispyville-insert-enter ()
+  "Insert a space when inserting after an opening delimiter.
+Do nothing if entering an insert state (see `lispyville-insert-states') from
+visual state or if there is a space or newline after the point. "
+  (when (and lispyville-mode
+             (not (eq evil-previous-state 'visual))
+             (not (memq evil-previous-state lispyville-insert-states))
+             (not (lispyville--in-string-p))
+             (lispyville--after-left-p)
+             (not (looking-at "[[:space:]\n]")))
+    (save-excursion
+      (insert " "))))
+
+(defun lispyville-insert-exit ()
+  "Remove any spaces inserted after an opening delimiter.
+Do nothing if entering an insert state from another insert state (see
+`lispyville-insert-states')."
+  (when (and lispyville-mode
+             (not (memq evil-next-state lispyville-insert-states))
+             (not (lispyville--in-string-p))
+             (lispyville--after-left-p))
+    (delete-region (point)
+                   (progn
+                     (skip-chars-forward "[:space:]")
+                     (point)))))
+
+(defun lispyville-space-after-insert (&optional undo)
+  "Use state hooks to automatically insert spaces after opening delimiters.
+
+If UNDO is non-nil, remove"
+  ;; add-hook works fine even if hook doesn't exist
+  (cond (undo
+         (dolist (state lispyville-insert-states)
+           (remove-hook (intern (format "evil-%s-state-entry-hook" state))
+                        #'lispyville-insert-enter)
+           (remove-hook (intern (format "evil-%s-state-exit-hook" state))
+                        #'lispyville-insert-exit)))
+        (t
+         (dolist (state lispyville-insert-states)
+           (add-hook (intern (format "evil-%s-state-entry-hook" state))
+                     #'lispyville-insert-enter)
+           (add-hook (intern (format "evil-%s-state-exit-hook" state))
+                     #'lispyville-insert-exit)))))
 
 ;; * Keybindings
 ;; TODO update evil dependency on next release (evil-define-key*)
@@ -1064,6 +1121,8 @@ When THEME is not given, `lispville-key-theme' will be used instead."
          (lispyville--define-key states
            (kbd "M-j") #'lispyville-drag-forward
            (kbd "M-k") #'lispyville-drag-backward))
+        (insert
+         (lispyville-space-after-insert))
         (escape
          (or states (setq states '(insert emacs)))
          (lispyville--define-key states
