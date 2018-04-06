@@ -122,6 +122,11 @@ to a non-nil value."
   :group 'lispyvilles
   :type 'list)
 
+(defface lispyville-special-face
+  '((t :foreground "#aa4456"))
+  "Face for lispyville special mode line indicator."
+  :group 'lispyville)
+
 (with-eval-after-load 'evil-surround
   (add-to-list 'evil-surround-operator-alist '(lispyville-change . change))
   (add-to-list 'evil-surround-operator-alist '(lispyville-delete . delete)))
@@ -1147,6 +1152,33 @@ When THEME is not given, `lispville-key-theme' will be used instead."
            (kbd "<escape>") #'lispyville-escape))))))
 
 (lispyville-set-key-theme)
+
+;; * Mode Line Integration
+(defun lispyville--special-p ()
+  "Return whether the point is in special."
+  (or (region-active-p)
+      (and (not (lispy--in-string-or-comment-p))
+           (or (lispy-left-p)
+               (lispy-right-p)
+               (and (lispy-bolp)
+                    (or (looking-at lispy-outline-header)
+                        (looking-at lispy-outline)))))))
+
+(defun lispyville--lispy-keybindings-active-p ()
+  "Return whether lispy keybindings are active."
+  (and lispy-mode
+       (memq evil-state lispyville-insert-states)
+       (lispyville--special-p)))
+
+(cl-defun lispyville-mode-line-string (&optional (special-text "🍰-special ")
+                                                 default-text)
+  "When added to the mode line, show SPECIAL-TEXT when in special.
+When not in special (or not in a state in `lispyville-insert-states'), show
+DEFAULT-TEXT."
+  `(:eval
+    (if (lispyville--lispy-keybindings-active-p)
+        (propertize ,special-text 'face 'lispyville-special-face)
+      ,default-text)))
 
 (provide 'lispyville)
 ;;; lispyville.el ends here

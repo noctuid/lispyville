@@ -211,6 +211,22 @@ By re-purposing =v= in visual state (which normally enters visual line mode) to 
 When using this theme with the =mark= theme, the =mark= theme should be specified first. If you would prefer that =ESC= always enters normal state (instead of returning you to lispy special with no region if you are in lispy special with a region), you can specify the =escape= theme after the =mark-toggle= theme.
 
 * Integration with Lispy
+** Mode Line Indicator for Lispy Special
+If you would like an additional visual indicator that lispy keybindings are active (i.e. when in special and in a state in =lispyville-insert-states=), lispyville also provides ~lispyville-mode-line-string~. It optionally takes two arguments: the text to display when lispy keybindings are active ("🍰-special " by default) and the default text (nothing by default). You can change the color/style of the text by customizing =lispyville-special-face=.
+#+begin_src emacs-lisp
+(setq-default mode-line-format
+              ;; ...
+               '(:eval (when (featurep 'lispyville)
+                         (lispyville-mode-line-string)))
+              ;; ...
+              )
+#+end_src
+
+Alternatively, you can use lispyville's lighter for this purpose (it will change to the color/style of =lispyville-special-face= when lispy keybindings are active):
+#+begin_src emacs-lisp
+(diminish 'lispyville-mode (lispyville-mode-line-string " 🍰" " 🍰"))
+#+end_src
+
 ** More Fluid Transitioning Between Normal State and Special
 Getting to special when in insert or emacs state is already pretty easy. You can use =)= or =[= and =]= (if you like those keybindings) to jump to a special location at any time. If you want to get there from normal state, it's a bit more tedious, since you need to first navigate to a special location and then enter insert or emacs state.
 
