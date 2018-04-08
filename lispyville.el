@@ -51,8 +51,11 @@ lispyville has been loaded."
        :tag "Safe versions of evil operators."
        operators)
       (const
-       :tag "Safe versions of the s and S operators."
-       s-operators)
+       :tag "Safe version of `evil-delete-backward-word'."
+       c-w)
+      (const
+       :tag "Alternative to `evil-indent' that acts like `lispy-tab'."
+       prettify)
       (const
        :tag "Extra motions similar to those provided by cleverparens."
        additional-movement)
@@ -66,20 +69,29 @@ lispyville has been loaded."
        :tag "Extra commands similar to those provided by cleverparens."
        additional)
       (const
+       :tag "Extra insert commands similar to those provided by cleverparens."
+       additional-insert)
+      (const
+       :tag "Commands similar to those provided by \
+vim-sexp-mappings-for-regular-people."
+       arrows)
+      (const
        :tag "Command to enter normal state and cancel an active region."
        escape)
       (const
        :tag "Lispy commands for marking."
        mark)
       (const
-       :tag "Lispy commands for marking that enter special instead of visual state."
+       :tag "Lispy commands for marking that enter special instead of visual \
+state."
        mark-special)
       (const
-       :tag "Commands for toggling between special and visual state and
+       :tag "Commands for toggling between special and visual state and \
 canceling a region."
        mark-toggle)
       (const
-       :tag "Insertion commands similar to those provided by cleverparens."
+       :tag "Insert a space when inserting after an opening delimiter or \
+before a closing one."
        insert))))
 
 (defcustom lispyville-barf-stay-with-closing nil
