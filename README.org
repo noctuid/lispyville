@@ -164,14 +164,43 @@ The =slurp/barf-lispy= key theme provides commands that act the same as the defa
 For both =<= bindings, if =lispyville-barf-stay-with-closing= is non-nil and barfing would move the closing delimiter behind the point, the point will instead be put on the closing delimiter.
 
 ** Additional Key Theme
-The corresponding symbol is =additional=. The default states are normal and visual. This key theme is the equivalent of cleverparen's "additional bindings" keys. It is currently incomplete. =M-j= is comparable to ~evil-cp-drag-forward~ and ~lispy-move-down~. =M-k= is comparable to ~evil-cp-drag-backward~ and ~lispy-move-up~.
+The corresponding symbol is =additional=. The default state is normal state. This key theme is the equivalent of cleverparens' "additional bindings" keys. It is currently incomplete. =M-j= is comparable to ~evil-cp-drag-forward~ and ~lispy-move-down~. =M-k= is comparable to ~evil-cp-drag-backward~ and ~lispy-move-up~.
 
-| key   | command                    |
-|-------+----------------------------|
-| =M-j= | ~lispyville-drag-forward~  |
-| =M-k= | ~lispyville-drag-backward~ |
+| key   | command                                  |
+|-------+------------------------------------------|
+| =M-j= | ~lispyville-drag-forward~                |
+| =M-k= | ~lispyville-drag-backward~               |
+| =M-J= | ~lispy-join~                             |
+| =M-s= | ~lispy-splice~                           |
+| =M-S= | ~lispy-split~                            |
+| =M-r= | ~lispy-raise-sexp~                       |
+| =M-R= | ~lispyville-raise-list~                  |
+| =M-t= | ~transpose-sexps~                        |
+| =M-v= | ~lispy-convolute-sexp~                   |
 
 ~lispyville-move-down~ is an alias for ~lispyville-drag-forward~, and ~lispyville-move-up~ is an alias for ~lispyville-drag-backward~.
+
+*** Additional Insert Key Theme
+The corresponding symbol is =additional-insert=. The default state is normal state. This key theme also corresponds to keybindings from cleverparens additional keybindings.
+
+| key   | command                                  |
+|-------+------------------------------------------|
+| =M-i= | ~lispyville-insert-at-beginning-of-list~ |
+| =M-a= | ~lispyville-insert-at-end-of-list~       |
+| =M-o= | ~lispyville-open-below-list~             |
+| =M-O= | ~lispyville-open-above-list~             |
+
+Unlike cleverparens, these commands work only with lists. ~evil-cp-insert-at-beginning-of-form~, for example, will insert at the beginning of strings as well. To me, it is simpler and more consistent to only consider lists instead of specially handling string atoms. If you would prefer the original behavior, feel free to make an issue, and I can add alternative commands.
+
+** Arrows Key Theme
+The corresponding symbol is =arrows=. The default state is normal state. This key theme provides similar keybindings to those from [[https://github.com/tpope/vim-sexp-mappings-for-regular-people][vim-sexp-mappings-for-regular-people]]. It is currently incomplete.
+
+| key  | command                                  |
+|------+------------------------------------------|
+| =<i= | ~lispyville-insert-at-beginning-of-list~ |
+| =>i= | ~lispyville-insert-at-end-of-list~       |
+
+Note that the original plugin uses =>I= and =<I= in order not to override the default =<= and =>= used with inner text objects. Since manual indentation is never necessary with lisp (e.g. use =aggressive-indent-mode= or ~lispyville-prettify~ / ~lispy-tab~ instead), this key theme does not attempt to leave the original keybindings intact.
 
 ** Escape Key Theme
 The corresponding symbol is =escape=. The default states are insert and emacs. See [[#using-both-separately][here]] for more information.

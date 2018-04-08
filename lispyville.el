@@ -91,13 +91,15 @@ only has an effect if `lispyville-commands-put-into-special' is nil."
   :type 'boolean)
 
 (defcustom lispyville-preferred-lispy-state 'insert
-  "The preferred evil state for using lispy.
+  "The preferred evil state for insertion and using lispy.
 This is used by any command that should enter special to determine the correct
 state."
   :group 'lispyville
   :type '(choice
           (const :tag "Use insert state to get into special." insert)
           (const :tag "Use emacs state to get into special." emacs)))
+
+(defvaralias 'lispyville-preferred-state 'lispyville-preferred-lispy-state)
 
 (defcustom lispyville-motions-put-into-special nil
   "Applicable motions will enter insert or emacs state.
@@ -895,6 +897,75 @@ This is the lispyville equivalent of `lispy-move-up' and
 
 (defalias 'lispyville-move-up 'lispyville-drag-backward)
 
+(evil-define-command lispyville-raise-list (count)
+  "Raise the current list COUNT times.
+This is the lispyville equivalent of `evil-cp-raise-form' except for lists
+only."
+  (interactive "<c>")
+  (save-excursion
+    ;; unlike `backward-up-list', works in string
+    (when (lispy--out-backward 1)
+      (lispy-raise (or count 1)))))
+
+;; ** Additional Insert Key Theme
+(evil-define-command lispyville-insert-at-beggining-of-list (count)
+  "Enter `lispyville-preferred-state' at the beginning of the current list.
+With COUNT, move backward/out COUNT lists first. This is the lispyville
+equivalent of `evil-cp-insert-at-beginning-of-form' except for lists only."
+  (interactive "<c>")
+  (when (lispy--out-backward (or count 1))
+    (forward-char)
+    (evil-change-state lispyville-preferred-state)))
+
+(defun lispyville--out-forward (count)
+  "Like `lispyville--out-forward' but don't return nil if move at least once.
+COUNT is passed to `lispy--out-forward'."
+  (let ((orig-pos (point)))
+    (lispy--out-forward count)
+    (not (= (point) orig-pos))))
+
+(evil-define-command lispyville-insert-at-end-of-list (count)
+  "Enter `lispyville-preferred-state' at the end of the current list.
+With COUNT, move forward/out COUNT lists first. This is the lispyville
+equivalent of `evil-cp-insert-at-end-of-form' except for lists only."
+  (interactive "<c>")
+  (when (lispyville--out-forward (or count 1))
+    (backward-char)
+    (evil-change-state lispyville-preferred-state)))
+
+(defun lispyville--top-level-p ()
+  "Return whether the point is at the top level."
+  (= (car (syntax-ppss)) 0))
+
+(evil-define-command lispyville-open-below-list (count)
+  "Enter `lispyville-preferred-state' below the current list and indent.
+With COUNT, move forward/out COUNT lists first. When exiting to the top-level,
+insert in between two newlines. This is the lispyville equivalent of
+`evil-cp-open-below-form' except for lists only. This is somewhat comparable to
+`lispy-out-forward-newline' as well"
+  (interactive "<c>")
+  (when (lispyville--out-forward (or count 1))
+    (newline-and-indent)
+    (when (lispyville--top-level-p)
+      (insert "\n"))
+    (evil-change-state lispyville-preferred-state)))
+
+(evil-define-command lispyville-open-above-list (count)
+  "Enter `lispyville-preferred-state' above the current list and indent.
+With COUNT, move backward/out COUNT lists first. When exiting to the top-level,
+insert in between two newlines. This is the lispyville equivalent of
+`evil-cp-open-above-form' except for lists only."
+  (interactive "<c>")
+  (when (lispy--out-backward (or count 1))
+    (save-excursion
+      (insert "\n")
+      (lispy--indent-for-tab))
+    (lispy--indent-for-tab)
+    (when (lispyville--top-level-p)
+      (save-excursion
+        (insert "\n")))
+    (evil-change-state lispyville-preferred-state)))
+
 ;; * Integration Between Visual State and Lispy's Special Mark State
 ;; ** Using Both Separately
 (defun lispyville-normal-state ()
@@ -1125,10 +1196,29 @@ When THEME is not given, `lispville-key-theme' will be used instead."
            ">" #'lispyville-slurp
            "<" #'lispyville-barf))
         (additional
-         (or states (setq states '(normal visual)))
+         (or states (setq states 'normal))
          (lispyville--define-key states
            (kbd "M-j") #'lispyville-drag-forward
-           (kbd "M-k") #'lispyville-drag-backward))
+           (kbd "M-k") #'lispyville-drag-backward
+           (kbd "M-J") #'lispy-join
+           (kbd "M-s") #'lispy-splice
+           (kbd "M-S") #'lispy-split
+           (kbd "M-r") #'lispy-raise-sexp
+           (kbd "M-R") #'lispyville-raise-list
+           (kbd "M-t") #'transpose-sexps
+           (kbd "M-v") #'lispy-convolute-sexp))
+        (additional-insert
+         (or states (setq states 'normal))
+         (lispyville--define-key states
+           (kbd "M-i") #'lispyville-insert-at-beggining-of-list
+           (kbd "M-a") #'lispyville-insert-at-end-of-list
+           (kbd "M-o") #'lispyville-open-below-list
+           (kbd "M-O") #'lispyville-open-above-list))
+        (arrows
+         (or states (setq states 'normal))
+         (lispyville--define-key states
+           "<i" #'lispyville-insert-at-beggining-of-list
+           ">i" #'lispyville-insert-at-end-of-list))
         (insert
          (lispyville-space-after-insert))
         (escape

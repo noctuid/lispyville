@@ -7,6 +7,7 @@
                              additional-movement
                              slurp/barf-cp
                              additional
+                             additional-insert
                              mark-toggle))
 (lispyville-set-key-theme)
 
@@ -759,6 +760,104 @@ character after it is not considered as part of the region."
   ;; (should (string= (lispyville-with "(a (|b c d))" (kbd "M-k"))
   ;;                  "((|b c d) a)"))
   )
+
+(ert-deftest lispyville-raise-list ()
+  ;; should work in the basic case
+  (should (string= (lispyville-with "((|a))"
+                     "M-R")
+                   "(|a)"))
+  ;; should work in a string
+  (should (string= (lispyville-with "((\"|a\"))"
+                     "M-R")
+                   "(\"|a\")"))
+  ;; should work with a count
+  (should (string= (lispyville-with "(((|a)))"
+                     "2 M-R")
+                   "(|a)"))
+  ;; should work with a count larger than the max possible count
+  (should (string= (lispyville-with "(((|a)))"
+                     "3 M-R")
+                   "(|a)")))
+
+(ert-deftest lispyville-insert-at-beginning-of-list ()
+  ;; should work in the basic case
+  (should (string= (lispyville-with "(a |b c)"
+                     "M-i")
+                   "(|a b c)"))
+  ;; should work in a string
+  (should (string= (lispyville-with "(a \"|b\" c)"
+                     "M-i")
+                   "(|a \"b\" c)"))
+  ;; should work with a count
+  (should (string= (lispyville-with "((a |b c))"
+                     "2 M-i")
+                   "(|(a b c))"))
+  ;; should work with a count larger than the max possible count
+  (should (string= (lispyville-with "((a |b c))"
+                     "3 M-i")
+                   "(|(a b c))")))
+
+(ert-deftest lispyville-insert-at-end-of-list ()
+  ;; should work in the basic case
+  (should (string= (lispyville-with "(a |b c)"
+                     "M-a")
+                   "(a b c|)"))
+  ;; should work in a string
+  (should (string= (lispyville-with "(a \"|b\" c)"
+                     "M-a")
+                   "(a \"b\" c|)"))
+  ;; should work with a count
+  (should (string= (lispyville-with "((a |b c))"
+                     "2 M-a")
+                   "((a b c)|)"))
+  ;; should work with a count larger than the max possible count
+  (should (string= (lispyville-with "((a |b c))"
+                     "3 M-a")
+                   "((a b c)|)")))
+
+(ert-deftest lispyville-open-below-list ()
+  ;; should work in the basic case
+  (should (string= (lispyville-with "((|a)\n b)"
+                     "M-o")
+                   "((a)\n |\n b)"))
+  ;; should work with trailing sexps
+  (should (string= (lispyville-with "((|a) b)"
+                     "M-o")
+                   "((a)\n |b)"))
+  ;; should insert an extra newline at the top-level
+  (should (string= (lispyville-with "(|a)"
+                     "M-o")
+                   "(a)\n\n|"))
+  ;; should work with a count
+  (should (string= (lispyville-with "((|a))"
+                     "2 M-o")
+                   "((a))\n\n|"))
+  ;; should work with a count larger than the max possible count
+  (should (string= (lispyville-with "((|a))"
+                     "3 M-o")
+                   "((a))\n\n|")))
+
+(ert-deftest lispyville-open-above-list ()
+  ;; should work in the basic case
+  (should (string= (lispyville-with "(a\n (|b))"
+                     "M-O")
+                   "(a\n |\n (b))"))
+  ;; should work with leading sexps
+  (should (string= (lispyville-with "(a (|b))"
+                     "M-O")
+                   "(a |\n (b))"))
+  ;; should insert an extra newline at the top-level
+  (should (string= (lispyville-with "(|a)"
+                     "M-O")
+                   "|\n\n(a)"))
+  ;; should work with a count
+  (should (string= (lispyville-with "((|a))"
+                     "2 M-O")
+                   "|\n\n((a))"))
+  ;; should work with a count larger than the max possible count
+  (should (string= (lispyville-with "((|a))"
+                     "3 M-O")
+                   "|\n\n((a))")))
 
 ;;; * Visual and Special Mark Integration
 (ert-deftest lispyville-toggle-mark-type ()
