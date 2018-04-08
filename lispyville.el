@@ -135,7 +135,7 @@ to a non-nil value."
   :type 'boolean)
 
 (defcustom lispyville-insert-states '(insert emacs hybrid iedit-insert)
-  "States "
+  "Insertion states that lispy special can be used from."
   :group 'lispyvilles
   :type 'list)
 
