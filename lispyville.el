@@ -77,7 +77,10 @@ lispyville has been loaded."
       (const
        :tag "Commands for toggling between special and visual state and
 canceling a region."
-       mark-toggle))))
+       mark-toggle)
+      (const
+       :tag "Insertion commands similar to those provided by cleverparens."
+       insert))))
 
 (defcustom lispyville-barf-stay-with-closing nil
   "When non-nil, stay with the closing delimiter when barfing.
