@@ -34,7 +34,7 @@
 (defgroup lispyville nil
   "Provides a minor mode to integrate evil with lispy."
   :group 'lispy
-  :prefix 'lispyville)
+  :prefix "lispyville-")
 
 (defcustom lispyville-key-theme '(operators c-w)
   "Determines the key theme initially set by lispyville.
