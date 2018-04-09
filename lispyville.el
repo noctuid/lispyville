@@ -920,7 +920,7 @@ only."
       (lispy-raise (or count 1)))))
 
 ;; ** Additional Insert Key Theme
-(evil-define-command lispyville-insert-at-beggining-of-list (count)
+(evil-define-command lispyville-insert-at-beginning-of-list (count)
   "Enter `lispyville-preferred-state' at the beginning of the current list.
 With COUNT, move backward/out COUNT lists first. This is the lispyville
 equivalent of `evil-cp-insert-at-beginning-of-form' except for lists only."
@@ -1222,14 +1222,14 @@ When THEME is not given, `lispville-key-theme' will be used instead."
         (additional-insert
          (or states (setq states 'normal))
          (lispyville--define-key states
-           (kbd "M-i") #'lispyville-insert-at-beggining-of-list
+           (kbd "M-i") #'lispyville-insert-at-beginning-of-list
            (kbd "M-a") #'lispyville-insert-at-end-of-list
            (kbd "M-o") #'lispyville-open-below-list
            (kbd "M-O") #'lispyville-open-above-list))
         (arrows
          (or states (setq states 'normal))
          (lispyville--define-key states
-           "<i" #'lispyville-insert-at-beggining-of-list
+           "<i" #'lispyville-insert-at-beginning-of-list
            ">i" #'lispyville-insert-at-end-of-list))
         (insert
          (lispyville-space-after-insert))
