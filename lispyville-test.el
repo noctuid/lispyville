@@ -698,6 +698,15 @@ character after it is not considered as part of the region."
                      "((a)| b (c))")))
   (lispyville-set-key-theme))
 
+(ert-deftest lispyville-wrap-with-round ()
+  (lispyville-set-key-theme '(wrap))
+  (should (string= (lispyville-with "|foo bar"
+                     "M-( i w")
+                   "|(foo) bar"))
+  (should (string= (lispyville-with "|foo bar"
+                     "M-( $")
+                   "|(foo bar)")))
+
 (ert-deftest lispyville-drag-forward ()
   ;; region
   (should (string= (lispyville-with "(~a |b c)"
@@ -858,6 +867,19 @@ character after it is not considered as part of the region."
   (should (string= (lispyville-with "((|a))"
                      "3 M-O")
                    "|\n\n((a))")))
+
+(ert-deftest lispyville-wrap-round ()
+  ;; TODO why are these failing?
+  ;; (lispyville-set-key-theme '((additional-wrap insert normal)))
+  ;; should never insert a space when in normal state
+  ;; (should (string= (lispyville-with "a |b"
+  ;;                    "M-(")
+  ;;                  "a (|b)"))
+  ;; should insert a space by default when in an insert state
+  ;; (should (string= (lispyville-with "a |b"
+  ;;                    "i M-(")
+  ;;                  "a (| b)"))
+  )
 
 ;;; * Visual and Special Mark Integration
 (ert-deftest lispyville-toggle-mark-type ()

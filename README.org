@@ -163,6 +163,19 @@ The =slurp/barf-lispy= key theme provides commands that act the same as the defa
 
 For both =<= bindings, if =lispyville-barf-stay-with-closing= is non-nil and barfing would move the closing delimiter behind the point, the point will instead be put on the closing delimiter.
 
+** Wrap Key Theme
+The corresponding symbol is =wrap=. The default state is normal state.
+
+| key   | command                         |
+|-------+---------------------------------|
+| =M-(= | ~lispyville-wrap-with-round~    |
+| =M-[= | ~lispyville-wrap-with-brackets~ |
+| =M-{= | ~lispyville-wrap-with-braces~   |
+
+These are operators that will wrap the specified region with the corresponding delimiter. These are potentially fewer keypresses than using =evil-surround= since you do not have to specify the delimiter to use afterwards. If you use these often, you might want to bind them to something more convenient (e.g. =M-b= or =(= for ~lispyville-wrap-with-round~: =(evil-define-key 'normal lispyville-mode-map "(" 'lispyville-wrap-with-round)= if you are not using the additional movement key theme). Also note that you can wrap in lispy special (e.g. in insert state with region selected) just by pressing the delimiter. If you don't use the movement key theme in visual state (e.g. you only use it to enter lispy special), you can bind =(= to wrap only in visual state (e.g. =(evil-define-key 'visual lispyville-mode-map "(" 'lispy-parens)=; ~lispy-parens~ (which is what ~lispyville-wrap-with-round~ calls) can be used directly in this case; =v$(= would then wrap to the end of the line).
+
+See the [[#additional-wrap-key-theme][additional wrap key theme]] for an alternative.
+
 ** Additional Key Theme
 The corresponding symbol is =additional=. The default state is normal state. This key theme is the equivalent of cleverparens' "additional bindings" keys. It is currently incomplete. =M-j= is comparable to ~evil-cp-drag-forward~ and ~lispy-move-down~. =M-k= is comparable to ~evil-cp-drag-backward~ and ~lispy-move-up~.
 
@@ -191,6 +204,21 @@ The corresponding symbol is =additional-insert=. The default state is normal sta
 | =M-O= | ~lispyville-open-above-list~             |
 
 Unlike cleverparens, these commands work only with lists. ~evil-cp-insert-at-beginning-of-form~, for example, will insert at the beginning of strings as well. To me, it is simpler and more consistent to only consider lists instead of specially handling string atoms. If you would prefer the original behavior, feel free to make an issue, and I can add alternative commands.
+
+*** Additional Wrap Key Theme
+The corresponding symbol is =additional-wrap=. The default state is normal state (to mimic cleverparens; you may want to also bind these in insert state).
+
+| key   | command                    |
+|-------+----------------------------|
+| =M-(= | ~lispyville-wrap-round~    |
+| =M-[= | ~lispyville-wrap-brackets~ |
+| =M-{= | ~lispyville-wrap-braces~   |
+
+These are equivalents of ~lisp-wrap-round~, ~lispy-wrap-brackets~, and ~lispy-wrap-braces~. By default, they will wrap the sexp at the point. With a positive count, they will wrap that number of sexps. With a count of 0, they will wrap as far as possible. With a negative count, they will wrap to the sexp at the end of the line (e.g. =|foo bar= to =(|foo bar)=). If you would prefer this behavior by default, you can bind =(= to =lispy-parens-auto-wrap= in insert state (e.g. =(define-key lispy-mode-map-lispy "(" 'lispy-parens-auto-wrap)=). Also, if you would prefer to use something more generic, you can try the [[#wrap-key-theme][wrap key theme]] which provides corresponding operators instead.
+
+Normally, lispy will insert a space after the opening delimiter when wrapping. The lispyville versions will never insert a space in normal state. When in a state in =lispyville-insert-states=, these commands will insert a space when =lispy-insert-space-after-wrap= is non-nil (the default).
+
+Unlike cleverparens, no commands to wrap previous sexps are provided. If you would like this functionality, feel free to make an issue.
 
 ** Arrows Key Theme
 The corresponding symbol is =arrows=. The default state is normal state. This key theme provides similar keybindings to those from [[https://github.com/tpope/vim-sexp-mappings-for-regular-people][vim-sexp-mappings-for-regular-people]]. It is currently incomplete.
