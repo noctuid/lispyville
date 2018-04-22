@@ -1,4 +1,4 @@
-;;; lispyville.el --- A minor mode for integrating evil with lispy.
+;;; lispyville.el --- A minor mode for integrating evil with lispy. -*- lexical-binding: t -*-
 
 ;; Author: Fox Kiester <noct@openmailbox.org>
 ;; URL: https://github.com/noctuid/lispyville
