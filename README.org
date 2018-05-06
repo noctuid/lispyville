@@ -122,8 +122,80 @@ The corresponding symbol is =prettify=. There are no default states; any state w
 |-----------------------+-----------------------|
 | =[remap evil-indent]= | ~lispyville-prettify~ |
 
+** Text Objects Key Theme
+Note that these commands are considered experimental (e.g. there are still no written tests and they need to be polished).
+
+The corresponding symbol is =text-objects=. There are no default states; the text objects are bound globally in =evil-inner-text-objects-map= and =evil-outer-text-objects-map= by default. Alternatively, you could bind the full key sequences in the visual and operator states in =lispyville-mode-map= (this will likely be the default in the future).
+
+=inner= and =a= versions exist for all of these:
+
+| key | command                     |
+|-----+-----------------------------|
+| =a= | ~lispyville-inner-atom~     |
+| =l= | ~lispyville-inner-list~     |
+| =x= | ~lispyville-inner-list~     |
+| =f= | ~lispyville-inner-function~ |
+| =c= | ~lispyville-inner-comment~  |
+| =S= | ~lispyville-inner-string~   |
+
+An atom is comparable to an evil symbol, except it will select entire strings and comments. The string, comment, and top-level function/form text objects are fairly generic and will likely work in other programming languages. Multiple adjacent line comments are considered to be one comment.
+
+All text objects have corresponding =forward-begin=, =forward-end=, =backward-begin=, and =backward-end= evil motions.
+
+All text objects are designed to work with [[https://github.com/noctuid/targets.e][targets.el]], and it is highly recommended that you use it if only for these text objects as they will work much better:
+
+- Seeking and region expansion will work
+- Next, previous, and remote (i.e. selected with avy overlays) text objects are provided
+
+Once targets is more stable, I will likely depend on it for this package. For now, if you want to try these out with targets, you can create and bind them with ~targets-define-to~. Here's example setup that will only create corresponding versions of the lispyville text objects:
+#+begin_src emacs-lisp
+(setq targets-text-objects nil)
+
+(targets-setup)
+
+(targets-define-to lispyville-comment 'lispyville-comment nil object
+                   :bind t :keys "c")
+
+(targets-define-to lispyville-atom 'lispyville-atom nil object
+                   :bind t :keys "a")
+
+(targets-define-to lispyville-list 'lispyville-list nil object
+                   :bind t :keys "l")
+
+(targets-define-to lispyville-sexp 'lispyville-sexp nil object
+                   :bind t :keys "x")
+
+(targets-define-to lispyville-function 'lispyville-function nil object
+                   :bind t :keys "f")
+
+(targets-define-to lispyville-comment 'lispyville-comment nil object
+                   :bind t :keys "c")
+
+(targets-define-to lispyville-string 'lispyville-string nil object
+                   :bind t :keys "S")
+#+end_src
+
+** Atom Movement Key Theme
+The corresponding symbol is =atom-motions= or =atom-movement=. There are no default states as remaps are used. The states argument is repurposed to determine whether to override the =WORD= motions instead. These motions are comparable to cleverparen's "symbol" motions and vim-sexp's "element" motions.
+
+Normally (e.g. =(theme1 ... atom-movement)=):
+| key                                | command                         |
+|------------------------------------+---------------------------------|
+| =[remap evil-forward-word-begin]=  | ~lispyville-forward-atom-begin~ |
+| =[remap evil-forward-word-end]=    | ~lispyville-forward-atom-end~   |
+| =[remap evil-backward-word-begin]= | ~lispyville-forward-atom-begin~ |
+| =[remap evil-backward-word-end]=   | ~lispyville-backward-atom-end~  |
+
+With a states argument (e.g. =(theme1 ... (atom-movement t))=)
+| key                                | command                         |
+|------------------------------------+---------------------------------|
+| =[remap evil-forward-WORD-begin]=  | ~lispyville-forward-atom-begin~ |
+| =[remap evil-forward-WORD-end]=    | ~lispyville-forward-atom-end~   |
+| =[remap evil-backward-WORD-begin]= | ~lispyville-forward-atom-begin~ |
+| =[remap evil-backward-WORD-end]=   | ~lispyville-backward-atom-end~  |
+
 ** Additional Movement Key Theme
-The corresponding symbol is =additional-movement=. The default state is motion (inherited in the normal, visual, and operator states). This key theme is the equivalent of cleverparen's additional movement keys. =[= and =]= are like the reverse of ~lispy-flow~. ={= and =}= are like ~lispy-flow~. =(= and =)= are like ~lispy-left~ and ~lispy-right~. Also see [[https://github.com/noctuid/lispyville#more-fluid-transitioning-between-normal-state-and-special][here]] for some extra information on automatically enter special after executing these motions.
+The corresponding symbol is =additional-motions= or =additional-movement=. The default state is motion (inherited in the normal, visual, and operator states). This key theme is the equivalent of cleverparen's additional movement keys. =[= and =]= are like the reverse of ~lispy-flow~. ={= and =}= are like ~lispy-flow~. =(= and =)= are like ~lispy-left~ and ~lispy-right~. Also see [[https://github.com/noctuid/lispyville#more-fluid-transitioning-between-normal-state-and-special][here]] for some extra information on automatically enter special after executing these motions.
 
 | key   | command                         |
 |-------+---------------------------------|

@@ -167,11 +167,12 @@ to a non-nil value."
 
 ;; * Helpers
 (defun lispyville--in-string-p ()
-  "Return whether the point is in a string.
+  "Return the bounds of the string at the point or nil.
 Unlike `lispy--in-string-p', |\"\" is not considered to be inside the string."
-  (let ((str (lispy--bounds-string)))
-    (and str
-         (not (= (car str) (point))))))
+  (let ((string-bounds (lispy--bounds-string)))
+    (and string-bounds
+         (not (= (car string-bounds) (point)))
+         string-bounds)))
 
 (defun lispyville--at-left-p ()
   "Return whether the point is before an opening delimiter.
@@ -701,16 +702,19 @@ This won't jump to the end of the buffer if there is no paren there."
   (lispyville--maybe-enter-special))
 
 ;; lispy-flow like (and reverse)
-(defun lispyville--move-to-delimiter (count &optional type)
-  "Move COUNT times to the next TYPE delimiter.
+(defun lispyville--move-to-delimiter (count &optional type no-string)
+  "Move COUNT times to the next TYPE delimiter (right by default).
 Move backwards when COUNT is negative. Unlike `evil-cp-next-closing', this won't
- jump into comments or strings."
+jump into comments or strings. When NO-STRING is non-nil, don't jump to string
+delimiters. Return nil and don't move the point on failure."
   (setq type (or type 'right))
   (let ((positive (> count 0))
         (regex (concat (if (eq type 'left)
                            (substring lispy-left 0 -1)
                          (substring  lispy-right 0 -1))
-                       "\"]"))
+                       (if no-string
+                           "]"
+                         "\"]")))
         (initial-pos (point))
         success)
     (dotimes (_ (abs count))
@@ -723,7 +727,9 @@ Move backwards when COUNT is negative. Unlike `evil-cp-next-closing', this won't
                (setq success t)
                (save-excursion
                  (goto-char (match-beginning 0))
+                 ;; TODO handle "(" in case with NO-STRING nil
                  (or
+                  (and no-string (lispy--in-string-p))
                   (lispy--in-comment-p)
                   (not (if (eq type 'left)
                            (lispyville--at-left-p)
@@ -731,7 +737,9 @@ Move backwards when COUNT is negative. Unlike `evil-cp-next-closing', this won't
         (setq success nil))
       (if success
           (goto-char (match-beginning 0))
-        (goto-char initial-pos)))))
+        (goto-char initial-pos)))
+    (unless (= (point) initial-pos)
+      (point))))
 
 (evil-define-motion lispyville-next-opening (count)
   "Move to the next opening delimiter COUNT times."
@@ -776,6 +784,655 @@ on outlines. Unlike `up-list', it will keep the point on the closing delimiter."
   (lispyville--maybe-enter-special))
 
 (defalias 'lispyville-right 'lispyville-up-list)
+
+;; * Text Objects Key Theme
+;; ** Atom (non-nestable)
+;; save-excursion was changed to save-mark-and-excursion in 25.1
+(eval-when-compile
+  (when (or (< emacs-major-version 25)
+            ;; unlikely since 25.1 was the first official release
+            (and (= emacs-major-version 25) (< emacs-minor-version 1)))
+    (defmacro save-mark-and-excursion (&rest body)
+      `(save-excursion ,@body))))
+
+(defun lispyville--bounds-atom ()
+  "Return the bounds of the atom at point or nil."
+  (let* ((comment-bounds (lispy--bounds-comment))
+         (string-bounds (lispyville--bounds-string))
+         ;; includes quote unlike symbol
+         (sexp-bounds (save-excursion
+                        (when (looking-at lispy-right)
+                          (backward-char))
+                        (bounds-of-thing-at-point 'sexp)))
+         (atom-bounds (when (and sexp-bounds
+                                 (not (equal sexp-bounds
+                                             (lispy--bounds-list))))
+                        sexp-bounds)))
+    (or comment-bounds string-bounds atom-bounds)))
+(put 'lispyville-atom 'bounds-of-thing-at-point #'lispyville--bounds-atom)
+
+(evil-define-motion lispyville-forward-atom-begin (count)
+  "Go to the next atom or comment beginning COUNT times."
+  (or count (setq count 1))
+  (if (< count 0)
+      (lispyville-backward-atom-begin (- count))
+    (cl-dotimes (_ count)
+      (let ((orig-pos (point)))
+        ;; move past the current atom
+        (ignore-errors (end-of-thing 'lispyville-atom))
+        ;; move to next atom
+        (forward-symbol 1)
+        (unless (and (ignore-errors (beginning-of-thing 'lispyville-atom))
+                     (not (<= (point) orig-pos)))
+          (goto-char orig-pos)
+          (cl-return))))))
+
+(evil-define-motion lispyville-backward-atom-begin (count)
+  "Go to the previous atom or comment beginning COUNT times. "
+  (or count (setq count 1))
+  (if (< count 0)
+      (lispyville-forward-atom-begin (- count))
+    (cl-dotimes (_ count)
+      (let ((orig-pos (point)))
+        (forward-symbol -1)
+        (unless (and (ignore-errors (beginning-of-thing 'lispyville-atom))
+                     (not (>= (point) orig-pos)))
+          (goto-char orig-pos)
+          (cl-return))))))
+
+(evil-define-motion lispyville-forward-atom-end (count)
+  "Go to the next atom or comment end COUNT times."
+  (or count (setq count 1))
+  (if (< count 0)
+      (lispyville-backward-atom-end (- count))
+    (cl-dotimes (_ count)
+      (let ((orig-pos (point)))
+        (forward-symbol 1)
+        (unless (and (ignore-errors (end-of-thing 'lispyville-atom))
+                     (not (<= (point) orig-pos)))
+          (goto-char orig-pos)
+          (cl-return))))))
+
+(evil-define-motion lispyville-backward-atom-end (count)
+  "Go to the previous atom or comment end COUNT times."
+  (or count (setq count 1))
+  (if (< count 0)
+      (lispyville-forward-atom-end (- count))
+    (cl-dotimes (_ count)
+      ;; move before the current atom
+      (ignore-errors (beginning-of-thing 'lispyville-atom))
+      ;; move to previous atom
+      (forward-symbol -1)
+      (unless (and (ignore-errors (end-of-thing 'lispyville-atom))
+                   (not (>= (point) orig-pos)))
+        (goto-char orig-pos)
+        (cl-return)))))
+
+(evil-define-motion lispyville-forward-atom (count)
+  "Move forward across an atom COUNT times"
+  (or count (setq count 1))
+  (let ((orig-pos (point)))
+    (if (< count 0)
+        (lispyville-backward-atom-begin (- count))
+      (lispyville-forward-atom-end count))
+    (if (= (point) orig-pos)
+        1
+      ;; evil wants 0 on success
+      0)))
+(put 'lispyville-atom 'forward-op #'lispyville-forward-atom)
+
+(evil-define-text-object lispyville-inner-atom (count &optional beg end type)
+  "Select inner atom.
+This is comparable to `evil-inner-symbol' except that it will select entire
+strings and comments."
+  (evil-select-inner-object 'lispyville-atom beg end type count))
+
+(evil-define-text-object lispyville-a-atom (count &optional beg end type)
+  "Select an atom.
+This is comparable to `evil-a-symbol' except that it will select entire
+strings and comments."
+  (evil-select-an-object 'lispyville-atom beg end type count))
+
+;; ** List (nestable, custom inner)
+(defun lispyville--bounds-list ()
+  "Return the bounds of the list at point."
+  (save-excursion
+    (lispy--exit-string)
+    (when (looking-at lispy-left)
+      (forward-char))
+    ;; with )| the point is on the next character
+    ;; (when (lispy-looking-back lispy-right)
+    ;;   (backward-char))
+    (ignore-errors
+      (let (beg end)
+        (up-list)
+        (setq end (point))
+        (backward-list)
+        (setq beg (point))
+        (cons beg end)))))
+(put 'lispyville-list 'bounds-of-thing-at-point #'lispyville--bounds-list)
+
+(defun lispyville--shrink-list (range)
+  "Shrink evil RANGE to exclude delimiters."
+  (save-excursion
+    (goto-char (car range))
+    (when (looking-at lispy-left)
+      (forward-char))
+    (setf (car range) (point))
+    (goto-char (cadr range))
+    ;; (skip-chars-backward "\n")
+    (when (lispy-looking-back lispy-right)
+      (backward-char))
+    (setf (cadr range) (point))
+    range))
+(put 'lispyville-list 'targets-shrink-inner-op #'lispyville--shrink-list)
+
+(evil-define-motion lispyville-forward-list-begin (count)
+  "Go to the next list beginning at any level of nesting COUNT times."
+  (lispyville--move-to-delimiter (or count 1) 'left t))
+
+(evil-define-motion lispyville-backward-list-begin (count)
+  "Go to the previous list beginning at any level of nesting COUNT times."
+  (lispyville--move-to-delimiter (if count (- count) -1) 'left t))
+
+(evil-define-motion lispyville-forward-list-end (count)
+  "Go to the next list end at any level of nesting COUNT timse."
+  (when (lispyville--move-to-delimiter (or count 1) nil t)
+    (forward-char)))
+
+(evil-define-motion lispyville-backward-list-end (count)
+  "Go to the previous list end at any level of nesting COUNT times."
+  (when (lispyville--move-to-delimiter (if count (- count) -1) nil t)
+    (forward-char)))
+
+(evil-define-motion lispyville-forward-list (count)
+  "Move forward across a list COUNT times."
+  (or count (setq count 1))
+  (let ((orig-pos (point)))
+    (if (< count 0)
+        (lispyville-backward-list-begin (- count))
+      (lispyville-forward-list-end count))
+    (if (= (point) orig-pos)
+        1
+      ;; evil wants 0 on success
+      0)))
+(put 'lispyville-list 'forward-op #'lispyville-forward-list)
+
+(evil-define-motion lispyville-forward-list-alt (count)
+  (or count (setq count 1))
+  (let ((orig-pos (point)))
+    (if (< count 0)
+        (lispyville-backward-list-begin (- count))
+      (lispyville-forward-list-begin count))))
+(put 'lispyville-list 'targets-seek-op #'lispyville-forward-list-alt)
+(put 'lispyville-list 'targets-seeks-forward-begin t)
+
+(defun lispyville--up-list ()
+  "Like `up-list' but return non-nil on success."
+  (when (region-beginning)
+    (goto-char (region-beginning)))
+  (let ((orig-pos (point)))
+    (ignore-errors (up-list))
+    (unless (= (point) orig-pos)
+      (point))))
+(put 'lispyville-list 'targets-extend-seek-op #'lispyville--up-list)
+
+(evil-define-text-object lispyville-inner-list (count &optional beg end type)
+  "Select inner list."
+  (let ((range
+         (evil-select-inner-object 'lispyville-list beg end type count)))
+    (when range
+      (lispyville--shrink-list range))))
+
+(evil-define-text-object lispyville-a-list (count &optional beg end type)
+  "Select a list."
+  (evil-select-inner-object 'lispyville-list beg end type count))
+
+;; ** Sexp (nestable, custom inner)
+;; TODO implement as a composite text object
+;; e.g. currently outer atom and inner atom are same
+(defun lispyville--min-distance-pos (target &rest positions)
+  "Return the position that is closest to TARGET from POSITIONS.
+Delete any nils from POSITIONS first."
+  (setq positions (delq nil positions))
+  (when positions
+    (cl-reduce (lambda (x y)
+                 (if (< (abs (- x target))
+                        (abs (- y target)))
+                     x
+                   y))
+               positions)))
+
+(defun lispyville--bounds-sexp ()
+  "Return the bounds of the sexp at the point or nil"
+  (let ((list-bounds (lispyville--bounds-list))
+        (atom-bounds (lispyville--bounds-atom)))
+    (if (and list-bounds
+             (looking-at lispy-right))
+        list-bounds
+      (or atom-bounds list-bounds))))
+(put 'lispyville-sexp 'bounds-of-thing-at-point #'lispyville--bounds-sexp)
+
+(defun lispyville--shrink-sexp (range)
+  (let ((altered-range (lispyville--shrink-list range)))
+    (when (equal range altered-range)
+      (save-excursion
+        (goto-char (cadr range))
+        (while (lispy-looking-back "[[:space:]]")
+          (backward-char))
+        (setf (cadr range) (point))))
+    altered-range))
+(put 'lispyville-sexp 'targets-shrink-inner-op #'lispyville--shrink-sexp)
+
+(evil-define-motion lispyville-forward-sexp-begin (count)
+  "Go to the next sexp beginning COUNT times"
+  (or count (setq count 1))
+  (if (< count 0)
+      (lispyville-backward-sexp-begin (- count))
+    (cl-dotimes (_ count)
+      (let* ((orig-pos (point))
+             (atom-pos (save-excursion
+                         (lispyville-forward-atom-begin 1)
+                         (unless (= (point) orig-pos)
+                           (point))))
+             (list-pos (save-excursion
+                         (lispyville-forward-list-begin 1)
+                         (unless (= (point) orig-pos)
+                           (point))))
+             (sexp-pos (lispyville--min-distance-pos (point) atom-pos list-pos)))
+        (if sexp-pos
+            (goto-char sexp-pos)
+          (cl-return))))))
+
+(evil-define-motion lispyville-backward-sexp-begin (count)
+  "Go to the previous sexp beginning COUNT times."
+  (or count (setq count 1))
+  (if (< count 0)
+      (lispyville-forward-sexp-begin (- count))
+    (cl-dotimes (_ count)
+      (let* ((orig-pos (point))
+             (atom-pos (save-excursion
+                         (lispyville-backward-atom-begin 1)
+                         (unless (= (point) orig-pos)
+                           (point))))
+             (list-pos (save-excursion
+                         (lispyville-backward-list-begin 1)
+                         (unless (= (point) orig-pos)
+                           (point))))
+             (sexp-pos (lispyville--min-distance-pos (point) atom-pos list-pos)))
+        (if sexp-pos
+            (goto-char sexp-pos)
+          (cl-return))))))
+
+(evil-define-motion lispyville-forward-sexp-end (count)
+  "Go to the next sexp end COUNT times."
+  (or count (setq count 1))
+  (if (< count 0)
+      (lispyville-backward-sexp-end (- count))
+    (cl-dotimes (_ count)
+      (let* ((orig-pos (point))
+             (atom-pos (save-excursion
+                         (lispyville-forward-atom-end 1)
+                         (unless (= (point) orig-pos)
+                           (point))))
+             (list-pos (save-excursion
+                         (lispyville-forward-list-end 1)
+                         (unless (= (point) orig-pos)
+                           (point))))
+             (sexp-pos (lispyville--min-distance-pos (point) atom-pos list-pos)))
+        (if sexp-pos
+            (goto-char sexp-pos)
+          (cl-return))))))
+
+(evil-define-motion lispyville-backward-sexp-end (count)
+  "Go to the previous sexp end COUNT times."
+  (or count (setq count 1))
+  (if (< count 0)
+      (lispyville-forward-sexp-end (- count))
+    (cl-dotimes (_ count)
+      (let* ((orig-pos (point))
+             (atom-pos (save-excursion
+                         (lispyville-backward-atom-end 1)
+                         (unless (= (point) orig-pos)
+                           (point))))
+             (list-pos (save-excursion
+                         (lispyville-backward-list-end 1)
+                         (unless (= (point) orig-pos)
+                           (point))))
+             (sexp-pos (lispyville--min-distance-pos (point) atom-pos list-pos)))
+        (if sexp-pos
+            (goto-char sexp-pos)
+          (cl-return))))))
+
+;; TODO replace other `lispyville-forward-sexp'?
+(evil-define-motion lispyville-forward-sexp-alt (count)
+  "Move forward across a sexp COUNT times"
+  (or count (setq count 1))
+  (let ((orig-pos (point)))
+    (if (< count 0)
+        (lispyville-backward-sexp-begin (- count))
+      (lispyville-forward-sexp-end count))
+    (if (= (point) orig-pos)
+        1
+      ;; evil wants 0 on success
+      0)))
+(put 'lispyville-sexp 'forward-op #'lispyville-forward-sexp-alt)
+
+(evil-define-motion lispyville-forward-sexp-alt2 (count)
+  (or count (setq count 1))
+  (let ((orig-pos (point)))
+    (if (< count 0)
+        (lispyville-backward-sexp-begin (- count))
+      (lispyville-forward-sexp-begin count))))
+(put 'lispyville-sexp 'targets-seek-op #'lispyville-forward-sexp-alt2)
+(put 'lispyville-sexp 'targets-seeks-forward-begin t)
+
+(evil-define-text-object lispyville-inner-sexp (count &optional beg end type)
+  "Select inner sexp."
+  (let ((range
+         (evil-select-inner-object 'lispyville-sexp beg end type count)))
+    (when range
+      (lispyville--shrink-sexp range))))
+
+(evil-define-text-object lispyville-a-sexp (count &optional beg end type)
+  "Select a sexp."
+  (evil-select-inner-object 'lispyville-sexp beg end type count))
+
+;; ** Function/Top-level Form (non-nestable)
+(put 'lispyville-function 'targets-no-extend t)
+
+(put 'lispyville-function 'targets-shrink-inner-op #'lispyville--shrink-list)
+
+(evil-define-motion lispyville-forward-function-begin (count)
+  "Go to the next function beginning COUNT times."
+  (or count (setq count 1))
+  (if (< count 0)
+      (lispyville-backward-function-begin (- count))
+    (cl-dotimes (_ count)
+      (let ((orig-pos (point)))
+        (unless (beginning-of-defun -1)
+          (goto-char orig-pos)
+          (cl-return))))))
+
+(evil-define-motion lispyville-backward-function-begin (count)
+  "Go to the previous function beginning COUNT times."
+  (or count (setq count 1))
+  (if (< count 0)
+      (lispyville-forward-function-begin (- count))
+    (cl-dotimes (_ count)
+      (let ((orig-pos (point)))
+        (unless (beginning-of-defun)
+          (goto-char orig-pos)
+          (cl-return))))))
+(put 'lispyville-function 'beginning-op #'lispyville-backward-function-begin)
+
+(evil-define-motion lispyville-forward-function-end (count)
+  "Go to the next function end COUNT times."
+  (or count (setq count 1))
+  (if (< count 0)
+      (lispyville-backward-function-end (- count))
+    (let ((orig-pos (point)))
+      (end-of-defun)
+      (unless (= (point) (1+ orig-pos))
+        (cl-decf count))
+      (cl-dotimes (_ count)
+        (let ((orig-pos (point)))
+          (end-of-defun)
+          ;; `end-of-defun' may move the point on failure
+          (unless (bounds-of-thing-at-point 'defun)
+            (goto-char orig-pos)
+            (cl-return))))
+      (unless (= (point) (1+ orig-pos))
+        (backward-char)))))
+(put 'lispyville-function 'end-op #'lispyville-forward-function-end)
+
+(evil-define-motion lispyville-backward-function-end (count)
+  "Go to the next previous end COUNT times."
+  (or count (setq count 1))
+  (if (< count 0)
+      (lispyville-backward-function-end (- count))
+    (let ((orig-pos (point)))
+      (cl-dotimes (_ count)
+        (let ((pos (point)))
+          (end-of-defun -1)
+          (unless (bounds-of-thing-at-point 'defun)
+            (goto-char pos)
+            (cl-return))))
+      (unless (= (point) orig-pos)
+        (backward-char)))))
+
+(evil-define-motion lispyville-forward-function (count)
+  "Move forward across a function COUNT times."
+  (or count (setq count 1))
+  (let ((orig-pos (point)))
+    (if (< count 0)
+        (lispyville-backward-function-begin (- count))
+      (lispyville-forward-function-end count))
+    (if (= (point) orig-pos)
+        1
+      ;; evil wants 0 on success
+      0)))
+(put 'lispyville-function 'forward-op #'lispyville-forward-function)
+
+(evil-define-text-object lispyville-inner-function
+  (count &optional beg end type)
+  "Select inner function."
+  (let ((range
+         (evil-select-inner-object 'lispyville-function beg end type count)))
+    (when range
+      (lispyville--shrink-list range))))
+
+(evil-define-text-object lispyville-a-function (count &optional beg end type)
+  "Select a function."
+  (evil-select-inner-object 'lispyville-function beg end type count))
+
+;; ** Comment (non-nestable)
+(put 'lispyville-comment 'targets-no-extend t)
+
+(put 'lispyville-comment 'bounds-of-thing-at-point #'lispy--bounds-comment)
+
+(evil-define-motion lispyville-forward-comment-begin (count)
+  "Go to the next comment beginning COUNT times."
+  (or count (setq count 1))
+  (if (< count 0)
+      (lispyville-backward-comment-begin (- count))
+    (cl-dotimes (_ count)
+      (let ((bounds (lispy--bounds-comment)))
+        (when bounds
+          (goto-char (1+ bounds))))
+      (if (re-search-forward "\\s<" nil t)
+          (goto-char (match-beginning 0))
+        (cl-return)))))
+
+(evil-define-motion lispyville-backward-comment-begin (count)
+  "Go to the previous comment beginning COUNT times."
+  (or count (setq count 1))
+  (if (< count 0)
+      (lispyville-forward-comment-begin (- count))
+    (cl-dotimes (_ count)
+      (let (bounds)
+        (if (and (re-search-backward "\\s<" nil t)
+                 (setq bounds (lispy--bounds-comment)))
+            (goto-char (car bounds))
+          (cl-return))))))
+
+(evil-define-motion lispyville-forward-comment-end (count)
+  "Go to the next comment end COUNT times."
+  (or count (setq count 1))
+  (if (< count 0)
+      (lispyville-backward-comment-end (- count))
+    (cl-dotimes (_ count)
+      (let ((bounds (lispy--bounds-comment)))
+        (unless (and bounds (not (= (point) (cdr bounds))))
+          (unless (and (re-search-forward "\\s<" nil t)
+                       (setq bounds (lispy--bounds-comment)))
+            (cl-return)))
+        (goto-char (cdr bounds))))))
+
+(evil-define-motion lispyville-backward-comment-end (count)
+  "Go to the previous comment end COUNT times."
+  (or count (setq count 1))
+  (if (< count 0)
+      (lispyville-forward-comment-begin (- count))
+    (cl-dotimes (_ count)
+      ;; exit current comment to the left
+      (let ((bounds (lispy--bounds-comment)))
+        (when bounds
+          (goto-char (car bounds))))
+      (let (bounds)
+        (if (and (re-search-backward "\\s<" nil t)
+                 (setq bounds (lispy--bounds-comment)))
+            (goto-char (cdr bounds))
+          (cl-return))))))
+
+(evil-define-motion lispyville-forward-comment (count)
+  "Move forward across a comment COUNT times."
+  (or count (setq count 1))
+  (let ((orig-pos (point)))
+    (if (< count 0)
+        (lispyville-backward-comment-begin (- count))
+      (lispyville-forward-comment-end count))
+    (if (= (point) orig-pos)
+        1
+      ;; evil wants 0 on success
+      0)))
+(put 'lispyville-comment 'forward-op #'lispyville-forward-comment)
+
+(evil-define-text-object lispyville-inner-comment (count &optional beg end type)
+  "Select inner comment."
+  (evil-select-inner-object 'lispyville-comment beg end type count))
+
+(evil-define-text-object lispyville-a-comment (count &optional beg end type)
+  "Select a comment."
+  (evil-select-an-object 'lispyville-comment beg end type count))
+
+;; ** String (non-nestable, custom inner)
+;; prevent selection of area in between strings
+(put 'lispyville-string 'targets-no-extend t)
+
+(defvar lispyville-string-regexp (rx (1+ (or (syntax string-quote)
+                                             (syntax string-delimiter)))))
+
+(defun lispyville--bounds-string ()
+  "Return the bounds of the string at the point or nil. "
+  ;; `lispy--bounds-string' doesn't work before single quote
+  ;; string beginnings in python for example, or just after
+  ;; a string quote
+  (or (lispy--bounds-string)
+      (save-excursion
+        (when (and (looking-at lispyville-string-regexp)
+                   (not (lispy--in-string-p)))
+          (forward-char))
+        (when (and (lispy-looking-back lispyville-string-regexp)
+                   (not (lispy--in-string-p)))
+          (backward-char))
+        (lispy--bounds-string))))
+(put 'lispyville-string 'bounds-of-thing-at-point #'lispyville--bounds-string)
+
+(defun lispyville--shrink-string (range)
+  "Shrink evil RANGE to exclude string delimiters."
+  (save-excursion
+    (goto-char (car range))
+    ;; can't use `skip-chars-forward' with \\s|
+    (when (looking-at lispyville-string-regexp)
+      (goto-char (match-end 0)))
+    (setf (car range) (point))
+    (goto-char (cadr range))
+    (while (lispy-looking-back lispyville-string-regexp)
+      (backward-char))
+    (setf (cadr range) (point))
+    range))
+(put 'lispyville-string 'targets-shrink-inner-op #'lispyville--shrink-string)
+
+(evil-define-motion lispyville-forward-string-begin (count)
+  "Go to the next string beginning COUNT times."
+  (or count (setq count 1))
+  (if (< count 0)
+      (lispyville-backward-string-begin (- count))
+    (cl-dotimes (_ count)
+      (ignore-errors (end-of-thing 'lispyville-string))
+      (let ((orig-pos (point)))
+        (while (and (re-search-forward lispyville-string-regexp nil t)
+                    (not (lispy--in-string-p))))
+        (if (lispy--in-string-p)
+            (goto-char (match-beginning 0))
+          (goto-char orig-pos)
+          (cl-return))))))
+
+(evil-define-motion lispyville-backward-string-begin (count)
+  "Go to the previous string beginning COUNT times.  "
+  (or count (setq count 1))
+  (let ((orig-pos (point)))
+    (if (< count 0)
+        (lispyville-forward-string-begin (- count))
+      (cl-dotimes (_ count)
+        (let ((orig-pos (point)))
+          (while (and (re-search-backward lispyville-string-regexp nil t)
+                      (not (lispy--in-string-p))))
+          (let ((beg (lispy--in-string-p)))
+            (if beg
+                (goto-char beg)
+              (goto-char orig-pos)
+              (cl-return))))))))
+
+(evil-define-motion lispyville-forward-string-end (count)
+  "Go the next string end COUNT times."
+  (or count (setq count 1))
+  (if (< count 0)
+      (lispyville-backward-string-end (- count))
+    (cl-dotimes (_ count)
+      (let ((orig-pos (point))
+            (bounds (lispyville--bounds-string)))
+        (unless (and bounds (not (= (point) (cdr bounds))))
+          (setq bounds nil)
+          (while (and (re-search-forward lispyville-string-regexp nil t)
+                      (not (setq bounds (lispyville--bounds-string))))))
+        (if bounds
+            (goto-char (cdr bounds))
+          (goto-char orig-pos)
+          (cl-return))))))
+
+(evil-define-motion lispyville-backward-string-end (count)
+  "Go the previous string end COUNT times."
+  (or count (setq count 1))
+  (if (< count 0)
+      (lispyville-forward-string-end (- count))
+    (cl-dotimes (_ count)
+      ;; exit string on the left
+      (let ((bounds (lispyville--bounds-string)))
+        (when bounds
+          (goto-char (car bounds))))
+      (let (bounds)
+        (while (and (re-search-backward lispyville-string-regexp nil t)
+                    (not (setq successp (lispyville--bounds-string)))))
+        (if bounds
+            (goto-char (cdr bounds))
+          (goto-char orig-pos)
+          (cl-return))))))
+
+(evil-define-motion lispyville-forward-string (count)
+  "Move forward across a string COUNT times."
+  (or count (setq count 1))
+  (let ((orig-pos (point)))
+    (if (< count 0)
+        (lispyville-backward-string-begin (- count))
+      (lispyville-forward-string-end count))
+    (if (= (point) orig-pos)
+        1
+      ;; evil wants 0 on success
+      0)))
+(put 'lispyville-string 'forward-op #'lispyville-forward-string)
+
+(evil-define-text-object lispyville-inner-string (count &optional beg end type)
+  "Select inner string."
+  (let ((range
+         (evil-select-inner-object 'lispyville-string beg end type count)))
+    (when range
+      (lispyville--shrink-string range))))
+
+(evil-define-text-object lispyville-a-string (count &optional beg end type)
+  "Select a string."
+  (evil-select-inner-object 'lispyville-string beg end type count))
 
 ;; * Commands
 ;; TODO make motion
@@ -1231,7 +1888,35 @@ When THEME is not given, `lispville-key-theme' will be used instead."
          ;; (or states (setq states 'normal))
          (lispyville--define-key states
            [remap evil-indent] #'lispyville-prettify))
-        (additional-movement
+        (text-objects
+         ;; TODO only define in `lispyville-mode-map'
+         (evil-define-key nil evil-inner-text-objects-map
+           "a" #'lispyville-inner-atom
+           "l" #'lispyville-inner-list
+           "x" #'lispyville-inner-sexp
+           "f" #'lispyville-inner-function
+           "c" #'lispyville-inner-comment
+           "S" #'lispyville-inner-string)
+         (evil-define-key nil evil-outer-text-objects-map
+           "a" #'lispyville-a-atom
+           "l" #'lispyville-a-list
+           "x" #'lispyville-a-sexp
+           "f" #'lispyville-a-function
+           "c" #'lispyville-a-comment
+           "S" #'lispyville-a-string))
+        ((atom-motions atom-movement)
+         (if states
+             (lispyville--define-key nil
+               [remap evil-forward-WORD-begin] #'lispyville-forward-atom-begin
+               [remap evil-forward-WORD-end] #'lispyville-forward-atom-end
+               [remap evil-backward-WORD-begin] #'lispyville-backward-atom-begin
+               [remap evil-backward-WORD-end] #'lispyville-backward-atom-end)
+           (lispyville--define-key nil
+             [remap evil-forward-word-begin] #'lispyville-forward-atom-begin
+             [remap evil-forward-word-end] #'lispyville-forward-atom-end
+             [remap evil-backward-word-begin] #'lispyville-backward-atom-begin
+             [remap evil-backward-word-end] #'lispyville-backward-atom-end)))
+        ((additional-motions additional-movement)
          (or states (setq states 'motion))
          (lispyville--define-key states
            "H" #'lispyville-backward-sexp
