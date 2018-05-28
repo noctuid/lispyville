@@ -136,7 +136,7 @@ to a non-nil value."
 
 (defcustom lispyville-insert-states '(insert emacs hybrid iedit-insert)
   "Insertion states that lispy special can be used from."
-  :group 'lispyvilles
+  :group 'lispyville
   :type 'list)
 
 (defface lispyville-special-face
