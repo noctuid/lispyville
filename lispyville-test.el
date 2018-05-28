@@ -881,7 +881,14 @@ character after it is not considered as part of the region."
   ;;                  "a (| b)"))
   )
 
-;;; * Visual and Special Mark Integration
+;; * Insert Key Theme
+(ert-deftest lispyville-insert ()
+  (lispyville-space-after-insert)
+  ;; should not error at bob
+  (should (lispyville-with "|(foo)" "i ESC"))
+  (lispyville-space-after-insert t))
+
+;; * Visual and Special Mark Integration
 (ert-deftest lispyville-toggle-mark-type ()
   (lispy-define-key lispy-mode-map "m" #'lispyville-toggle-mark-type)
   ;; test that it behaves as `lispy-mark-list' without region
