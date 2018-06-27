@@ -645,7 +645,7 @@ ARG has the same effect."
   (interactive "<r>")
   (let ((orig-pos (point)))
     (evil-exit-visual-state)
-    (ignore-errors (backward-up-list))
+    (ignore-errors (lispyville-backward-up-list))
     (while (and (ignore-errors (lispyville--forward-list))
                 (<= (save-excursion
                       (backward-list))
