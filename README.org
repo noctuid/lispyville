@@ -142,7 +142,7 @@ An atom is comparable to an evil symbol, except it will select entire strings an
 
 All text objects have corresponding =forward-begin=, =forward-end=, =backward-begin=, and =backward-end= evil motions.
 
-All text objects are designed to work with [[https://github.com/noctuid/targets.e][targets.el]], and it is highly recommended that you use it if only for these text objects as they will work much better:
+All text objects are designed to work with [[https://github.com/noctuid/targets.el][targets.el]], and it is highly recommended that you use it if only for these text objects as they will work much better:
 
 - Seeking and region expansion will work
 - Next, previous, and remote (i.e. selected with avy overlays) text objects are provided
