@@ -258,41 +258,54 @@ When DELETE is non-nil, delete the safe part of the region."
         (delete-region (car safe-region) (cdr safe-region))))
     (apply #'concat safe-strings)))
 
+;; TODO splice strings that aren't double quotes or have multiple delimiters on
+;; either side
+(defun lispyville--splice-string ()
+  "Splice a string at the point."
+  (cond ((and (not (bobp))
+              (save-excursion
+                (backward-char)
+                (lispy--in-string-p)))
+         (let ((right-quote (point)))
+           (lispy--exit-string)
+           (save-excursion
+             (goto-char right-quote)
+             (delete-char 1))
+           (delete-char 1)))
+        (t
+         (delete-char 1)
+         (while (progn (re-search-forward "\"" nil t)
+                       (looking-back "\\\\\"" (- (point) 2))))
+         (delete-char -1))))
+
 (defun lispyville--splice ()
   "Like `lispy-splice' but also splice strings."
   (save-excursion
     (if (looking-at "\"")
-        (cond ((and (not (bobp))
-                    (save-excursion
-                      (backward-char)
-                      (lispy--in-string-p)))
-               (let ((right-quote (point)))
-                 (lispy--exit-string)
-                 (save-excursion
-                   (goto-char right-quote)
-                   (delete-char 1))
-                 (delete-char 1)))
-              (t
-               (delete-char 1)
-               (while (progn (re-search-forward "\"" nil t)
-                             (looking-back "\\\\\"" (- (point) 2))))
-               (delete-char -1)))
+        (lispyville--splice-string)
+      (when (looking-at lispy-right)
+        (forward-char))
       (lispy-splice 1))))
 
 (defun lispyville--safe-string-splice (beg end)
   "Like `lispyville--safe-string' except always deletes.
 Instead of ignoring unmatched delimiters between BEG and END, this will splice
 them."
-  (let ((unmatched-positions (lispy--find-unmatched-delimiters beg end))
+  (let ((beg-marker (save-excursion
+                      (goto-char beg)
+                      (point-marker)))
+        (end-marker (save-excursion
+                      (goto-char end)
+                      (point-marker)))
+        (unmatched-positions (lispy--find-unmatched-delimiters beg end))
         safe-text)
     (evil-exit-visual-state)
     (save-excursion
       (dolist (pos unmatched-positions)
         (goto-char pos)
         (lispyville--splice))
-      (setq end (- end (length unmatched-positions)))
-      (setq safe-text (filter-buffer-substring beg end))
-      (delete-region beg end)
+      (setq safe-text (filter-buffer-substring beg-marker end-marker))
+      (delete-region beg-marker end-marker)
       safe-text)))
 
 (defvar lispyville--safe-strings nil

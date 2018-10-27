@@ -259,15 +259,32 @@ character after it is not considered as part of the region."
   (should (string= (lispyville-with "|(a)"
                      "x")
                    "|a"))
-  ;; errors without space for some reason
-  ;; doesn't happen in my emacs
-  (should (string= (lispyville-with "(a|) "
+  (should (string= (lispyville-with "(a|)"
                      "x")
-                   "a| "))
+                   "a|"))
+  ;; nested side-by-side delimiters
+  (should (string= (lispyville-with "(foo (bar|))"
+                     "x")
+                   "(foo bar|)"))
+  (should (string= (lispyville-with "(foo (bar)|)"
+                     "x")
+                   "foo (bar)|"))
   ;; visual mode
   (should (string= (lispyville-with "~(|a\n (b c))"
                      "x")
                    "|\n (b c)"))
+  (should (string= (lispyville-with "~(foo)|"
+                     "x"
+                     (lispyville-replace-with-last-kill))
+                   "(foo)|"))
+  (should (string= (lispyville-with "(fo~o)|"
+                     "x"
+                     (lispyville-replace-with-last-kill))
+                   "o|"))
+  (should (string= (lispyville-with "~(|foo)"
+                     "x"
+                     (lispyville-replace-with-last-kill))
+                   "f|"))
   ;; visual block mode
   ;; should have same behavior as d in this case
   (should (string= (lispyville-with "((~a b)\n (c |d))"
@@ -285,14 +302,33 @@ character after it is not considered as part of the region."
   (should (string= (lispyville-with "(|a)"
                      "X")
                    "|a"))
-  (should (string= (lispyville-with "(a)| "
+  (should (string= (lispyville-with "(a)|"
                      "X")
-                   "a| "))
+                   "a|"))
+  ;; nested side-by-side delimiters
+  (should (string= (lispyville-with "(foo (bar)|)"
+                     "X")
+                   "(foo bar|)"))
+  (should (string= (lispyville-with "(foo (bar))|"
+                     "X")
+                   "foo (bar)|"))
   ;; visual mode
   ;; should behave the same as x here
   (should (string= (lispyville-with "~(|a\n (b c))"
                      "X")
                    "|\n (b c)"))
+  (should (string= (lispyville-with "~(foo)|"
+                     "X"
+                     (lispyville-replace-with-last-kill))
+                   "(foo)|"))
+  (should (string= (lispyville-with "(fo~o)|"
+                     "X"
+                     (lispyville-replace-with-last-kill))
+                   "o|"))
+  (should (string= (lispyville-with "~(|foo)"
+                     "X"
+                     (lispyville-replace-with-last-kill))
+                   "f|"))
   ;; visual block mode
   ;; should have same behavior as d in this case
   (should (string= (lispyville-with "((~a b)\n (c |d))"
