@@ -102,6 +102,8 @@ only has an effect if `lispyville-commands-put-into-special' is nil."
   :group 'lispyville
   :type 'boolean)
 
+(defvaralias 'lispyville-preferred-state 'lispyville-preferred-lispy-state)
+
 (defcustom lispyville-preferred-lispy-state 'insert
   "The preferred evil state for insertion and using lispy.
 This is used by any command that should enter special to determine the correct
@@ -110,8 +112,6 @@ state."
   :type '(choice
           (const :tag "Use insert state to get into special." insert)
           (const :tag "Use emacs state to get into special." emacs)))
-
-(defvaralias 'lispyville-preferred-state 'lispyville-preferred-lispy-state)
 
 (defcustom lispyville-motions-put-into-special nil
   "Applicable motions will enter insert or emacs state.
@@ -318,20 +318,19 @@ BEG and END correspond to the start and beginning of the rectangle. DELETE is
 passed to `lispyville--safe-string'. If DELETE is the symbol 'splice,
 `lispyville--safe-string-splice' will be used instead."
   (setq lispyville--safe-strings nil)
-  (let (safe-string)
-    (apply-on-rectangle
-     (lambda (beg end delete)
-       (setq beg (save-excursion (move-to-column beg) (point)))
-       (setq end (save-excursion (move-to-column end) (point)))
-       (push (if (eq delete 'splice)
-                 (lispyville--safe-string-splice beg end)
-               (lispyville--safe-string beg end delete))
-             lispyville--safe-strings))
-     beg end delete)
-    (apply #'concat
-           (lispy-interleave
-            "\n"
-            (nreverse lispyville--safe-strings)))))
+  (apply-on-rectangle
+   (lambda (beg end delete)
+     (setq beg (save-excursion (move-to-column beg) (point)))
+     (setq end (save-excursion (move-to-column end) (point)))
+     (push (if (eq delete 'splice)
+               (lispyville--safe-string-splice beg end)
+             (lispyville--safe-string beg end delete))
+           lispyville--safe-strings))
+   beg end delete)
+  (apply #'concat
+         (lispy-interleave
+          "\n"
+          (nreverse lispyville--safe-strings))))
 
 (defun lispyville--safe-manipulate
     (beg end &optional type delete yank register yank-handler)
@@ -652,7 +651,7 @@ ARG has the same effect."
         (goto-char pos)
       (error "No more lists"))))
 
-(evil-define-operator lispyville-prettify (beg end)
+(evil-define-operator lispyville-prettify (_beg end)
   "Prettify lists from BEG to END."
   :move-point nil
   (interactive "<r>")
@@ -875,14 +874,15 @@ on outlines. Unlike `up-list', it will keep the point on the closing delimiter."
   (if (< count 0)
       (lispyville-forward-atom-end (- count))
     (cl-dotimes (_ count)
-      ;; move before the current atom
-      (ignore-errors (beginning-of-thing 'lispyville-atom))
-      ;; move to previous atom
-      (forward-symbol -1)
-      (unless (and (ignore-errors (end-of-thing 'lispyville-atom))
-                   (not (>= (point) orig-pos)))
-        (goto-char orig-pos)
-        (cl-return)))))
+      (let ((orig-pos (point)))
+        ;; move before the current atom
+        (ignore-errors (beginning-of-thing 'lispyville-atom))
+        ;; move to previous atom
+        (forward-symbol -1)
+        (unless (and (ignore-errors (end-of-thing 'lispyville-atom))
+                     (not (>= (point) orig-pos)))
+          (goto-char orig-pos)
+          (cl-return))))))
 
 (evil-define-motion lispyville-forward-atom (count)
   "Move forward across an atom COUNT times"
@@ -976,10 +976,9 @@ strings and comments."
 
 (evil-define-motion lispyville-forward-list-alt (count)
   (or count (setq count 1))
-  (let ((orig-pos (point)))
-    (if (< count 0)
-        (lispyville-backward-list-begin (- count))
-      (lispyville-forward-list-begin count))))
+  (if (< count 0)
+      (lispyville-backward-list-begin (- count))
+    (lispyville-forward-list-begin count)))
 (put 'lispyville-list 'targets-seek-op #'lispyville-forward-list-alt)
 (put 'lispyville-list 'targets-seeks-forward-begin t)
 
@@ -1136,10 +1135,9 @@ Delete any nils from POSITIONS first."
 
 (evil-define-motion lispyville-forward-sexp-alt2 (count)
   (or count (setq count 1))
-  (let ((orig-pos (point)))
-    (if (< count 0)
-        (lispyville-backward-sexp-begin (- count))
-      (lispyville-forward-sexp-begin count))))
+  (if (< count 0)
+      (lispyville-backward-sexp-begin (- count))
+    (lispyville-forward-sexp-begin count)))
 (put 'lispyville-sexp 'targets-seek-op #'lispyville-forward-sexp-alt2)
 (put 'lispyville-sexp 'targets-seeks-forward-begin t)
 
@@ -1378,18 +1376,17 @@ Delete any nils from POSITIONS first."
 (evil-define-motion lispyville-backward-string-begin (count)
   "Go to the previous string beginning COUNT times.  "
   (or count (setq count 1))
-  (let ((orig-pos (point)))
-    (if (< count 0)
-        (lispyville-forward-string-begin (- count))
-      (cl-dotimes (_ count)
-        (let ((orig-pos (point)))
-          (while (and (re-search-backward lispyville-string-regexp nil t)
-                      (not (lispy--in-string-p))))
-          (let ((beg (lispy--in-string-p)))
-            (if beg
-                (goto-char beg)
-              (goto-char orig-pos)
-              (cl-return))))))))
+  (if (< count 0)
+      (lispyville-forward-string-begin (- count))
+    (cl-dotimes (_ count)
+      (let ((orig-pos (point)))
+        (while (and (re-search-backward lispyville-string-regexp nil t)
+                    (not (lispy--in-string-p))))
+        (let ((beg (lispy--in-string-p)))
+          (if beg
+              (goto-char beg)
+            (goto-char orig-pos)
+            (cl-return)))))))
 
 (evil-define-motion lispyville-forward-string-end (count)
   "Go the next string end COUNT times."
@@ -1414,17 +1411,18 @@ Delete any nils from POSITIONS first."
   (if (< count 0)
       (lispyville-forward-string-end (- count))
     (cl-dotimes (_ count)
-      ;; exit string on the left
-      (let ((bounds (lispyville--bounds-string)))
-        (when bounds
-          (goto-char (car bounds))))
-      (let (bounds)
-        (while (and (re-search-backward lispyville-string-regexp nil t)
-                    (not (setq successp (lispyville--bounds-string)))))
-        (if bounds
-            (goto-char (cdr bounds))
-          (goto-char orig-pos)
-          (cl-return))))))
+      (let ((orig-pos (point)))
+        ;; exit string on the left
+        (let ((bounds (lispyville--bounds-string)))
+          (when bounds
+            (goto-char (car bounds))))
+        (let (bounds)
+          (while (and (re-search-backward lispyville-string-regexp nil t)
+                      (not (setq bounds (lispyville--bounds-string)))))
+          (if bounds
+              (goto-char (cdr bounds))
+            (goto-char orig-pos)
+            (cl-return)))))))
 
 (evil-define-motion lispyville-forward-string (count)
   "Move forward across a string COUNT times."
