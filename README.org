@@ -158,7 +158,7 @@ The corresponding symbol is =prettify=. There are no default states; any state w
 ** Text Objects Key Theme
 Note that these commands are considered experimental (e.g. there are still no written tests and they need to be polished).
 
-The corresponding symbol is =text-objects=. There are no default states; the text objects are bound globally in =evil-inner-text-objects-map= and =evil-outer-text-objects-map= by default. Alternatively, you could bind the full key sequences in the visual and operator states in =lispyville-mode-map= (this will likely be the default in the future).
+The corresponding symbol is =text-objects=. There are no default states; the text objects are bound in the local visual and operator state keymaps =lispyville-inner-text-objects-map= and =lispyville-outer-text-objects-map=, which are activated only when lispyville-mode is active.
 
 =inner= and =a= versions exist for all of these:
 

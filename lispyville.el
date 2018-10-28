@@ -155,18 +155,30 @@ to a non-nil value."
 (when (boundp 'evil-change-commands)
   (add-to-list 'evil-change-commands #'lispyville-change))
 
+(defvar lispyville-inner-text-objects-map (make-sparse-keymap)
+  "Keymap for evil inner text objects that take effect only in lispyville-mode")
+
+(defvar lispyville-outer-text-objects-map (make-sparse-keymap)
+  "Keymap for evil outer text objects that take effect only in lispyville-mode")
+
 ;;;###autoload
 (define-minor-mode lispyville-mode
   "A minor mode for integrating evil with lispy."
   :lighter " LYVLE"
   :keymap (make-sparse-keymap)
-  (when lispyville-mode
-    (evil-normalize-keymaps)
-    (unless lispyville-no-alter-lispy-options
-      (setq lispy-safe-delete t
-            lispy-safe-copy t
-            lispy-safe-paste t
-            lispy-safe-actions-no-pull-delimiters-into-comments t))))
+  (if lispyville-mode
+      (progn
+        (evil-normalize-keymaps)
+        (evil-define-key '(visual operator) 'local
+          "i" lispyville-inner-text-objects-map
+          "a" lispyville-outer-text-objects-map)
+        (unless lispyville-no-alter-lispy-options
+          (setq lispy-safe-delete t
+                lispy-safe-copy t
+                lispy-safe-paste t
+                lispy-safe-actions-no-pull-delimiters-into-comments t)))
+    (evil-define-key '(visual operator) 'local
+      "i" nil "a" nil)))
 
 ;; * Helpers
 (defun lispyville--in-string-p ()
@@ -2000,15 +2012,14 @@ When THEME is not given, `lispville-key-theme' will be used instead."
          (lispyville--define-key states
            [remap evil-indent] #'lispyville-prettify))
         (text-objects
-         ;; TODO only define in `lispyville-mode-map'
-         (evil-define-key nil evil-inner-text-objects-map
+         (evil-define-key nil lispyville-inner-text-objects-map
            "a" #'lispyville-inner-atom
            "l" #'lispyville-inner-list
            "x" #'lispyville-inner-sexp
            "f" #'lispyville-inner-function
            "c" #'lispyville-inner-comment
            "S" #'lispyville-inner-string)
-         (evil-define-key nil evil-outer-text-objects-map
+         (evil-define-key nil lispyville-outer-text-objects-map
            "a" #'lispyville-a-atom
            "l" #'lispyville-a-list
            "x" #'lispyville-a-sexp
