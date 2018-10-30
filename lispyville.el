@@ -828,6 +828,7 @@ on outlines. Unlike `up-list', it will keep the point on the closing delimiter."
 
 (evil-define-motion lispyville-forward-atom-begin (count)
   "Go to the next atom or comment beginning COUNT times."
+  :type exclusive
   (or count (setq count 1))
   (if (< count 0)
       (lispyville-backward-atom-begin (- count))
@@ -844,6 +845,7 @@ on outlines. Unlike `up-list', it will keep the point on the closing delimiter."
 
 (evil-define-motion lispyville-backward-atom-begin (count)
   "Go to the previous atom or comment beginning COUNT times. "
+  :type exclusive
   (or count (setq count 1))
   (if (< count 0)
       (lispyville-forward-atom-begin (- count))
@@ -857,7 +859,9 @@ on outlines. Unlike `up-list', it will keep the point on the closing delimiter."
 
 (evil-define-motion lispyville-forward-atom-end (count)
   "Go to the next atom or comment end COUNT times."
+  :type inclusive
   (or count (setq count 1))
+  (forward-char 1)
   (if (< count 0)
       (lispyville-backward-atom-end (- count))
     (cl-dotimes (_ count)
@@ -866,10 +870,12 @@ on outlines. Unlike `up-list', it will keep the point on the closing delimiter."
         (unless (and (ignore-errors (end-of-thing 'lispyville-atom))
                      (not (<= (point) orig-pos)))
           (goto-char orig-pos)
-          (cl-return))))))
+          (cl-return))))
+    (forward-char -1)))
 
 (evil-define-motion lispyville-backward-atom-end (count)
   "Go to the previous atom or comment end COUNT times."
+  :type inclusive
   (or count (setq count 1))
   (if (< count 0)
       (lispyville-forward-atom-end (- count))
@@ -882,7 +888,8 @@ on outlines. Unlike `up-list', it will keep the point on the closing delimiter."
         (unless (and (ignore-errors (end-of-thing 'lispyville-atom))
                      (not (>= (point) orig-pos)))
           (goto-char orig-pos)
-          (cl-return))))))
+          (cl-return))))
+    (forward-char -1)))
 
 (evil-define-motion lispyville-forward-atom (count)
   "Move forward across an atom COUNT times"
