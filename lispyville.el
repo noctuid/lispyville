@@ -1203,7 +1203,7 @@ Delete any nils from POSITIONS first."
           (unless (bounds-of-thing-at-point 'defun)
             (goto-char orig-pos)
             (cl-return))))
-      (unless (= (point) (1+ orig-pos))
+      (unless (or (eobp) (= (point) (1+ orig-pos)))
         (backward-char)))))
 (put 'lispyville-function 'end-op #'lispyville-forward-function-end)
 
