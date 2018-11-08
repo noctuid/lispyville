@@ -105,6 +105,39 @@ Like with cleverparens, =dd= will bring closing delimiters that are on a line by
 | =[remap evil-delete-backward-char]= | ~lispyville-delete-char-or-splice-backwards~ |
 | =[remap evil-substitute]=           | ~lispyville-substitute~                      |
 | =[remap evil-change-whole-line]=    | ~lispyville-change-whole-line~               |
+| =[remap evil-join]=                 | ~lispyville-join~                            |
+
+In particular, =J= implements a safe version of the evil-join operator, which preserves structure by always placing uncommented regions to the left of line comments, avoiding the scenario of an unbalanced line being joined to the inline comment above it.
+
+#+begin_src emacs-lisp
+;; before (cursor at |)
+|(foo  ; bar
+  baz)
+
+;; after "J":
+(foo| baz) ; bar
+#+end_src
+
+To "slurp"  following line(s) into the commented region in the usual manner, first explicitly comment them out with =lispyville-comment-or-uncomment=, which moves unbalanced delimiters out of the way (refer to the =commentary= theme).
+=lispyville-join= will then splice the comments together, removing any intermediate whitespace and comment syntax.
+
+#+begin_src emacs-lisp
+;; initial state (cursor at |)
+(foo  ; bar
+ |quux)
+
+;; "gcc"
+(foo  ; bar
+ |;; quux
+ )
+
+;; "kJ"
+(foo  ; bar| quux
+ )
+
+;; "J"
+(foo)|  ; bar quux
+#+end_src
 
 ** C-w Key Theme
 The corresponding symbol is =c-w=. There are no default states; any state where ~evil-delete-backward-word~ is bound will be affected. This is the safe version of ~evil-delete-backward-word~. It will act as ~lispy-delete-backward~ after delimiters (and delete everything within the delimiters).
@@ -302,7 +335,7 @@ The corresponding symbol is =additional-wrap=. The default state is normal state
 | =M-[= | ~lispyville-wrap-brackets~ |
 | =M-{= | ~lispyville-wrap-braces~   |
 
-These are equivalents of ~lisp-wrap-round~, ~lispy-wrap-brackets~, and ~lispy-wrap-braces~. By default, they will wrap the sexp at the point. With a positive count, they will wrap that number of sexps. With a count of 0, they will wrap as far as possible. With a negative count, they will wrap to the sexp at the end of the line (e.g. =|foo bar= to =(|foo bar)=). If you would prefer this behavior by default, you can bind =(= to =lispy-parens-auto-wrap= in insert state (e.g. =(define-key lispy-mode-map-lispy "(" 'lispy-parens-auto-wrap)=). Also, if you would prefer to use something more generic, you can try the [[#wrap-key-theme][wrap key theme]] which provides corresponding operators instead.
+These are equivalents of ~lispy-wrap-round~, ~lispy-wrap-brackets~, and ~lispy-wrap-braces~. By default, they will wrap the sexp at the point. With a positive count, they will wrap that number of sexps. With a count of 0, they will wrap as far as possible. With a negative count, they will wrap to the sexp at the end of the line (e.g. =|foo bar= to =(|foo bar)=). If you would prefer this behavior by default, you can bind =(= to =lispy-parens-auto-wrap= in insert state (e.g. =(define-key lispy-mode-map-lispy "(" 'lispy-parens-auto-wrap)=). Also, if you would prefer to use something more generic, you can try the [[#wrap-key-theme][wrap key theme]] which provides corresponding operators instead.
 
 Normally, lispy will insert a space after the opening delimiter when wrapping. The lispyville versions will never insert a space in normal state. When in a state in =lispyville-insert-states=, these commands will insert a space when =lispy-insert-space-after-wrap= is non-nil (the default).
 

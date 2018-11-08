@@ -687,6 +687,58 @@ commented regions and preserve the balanced structure. "
   (interactive "<R>")
   (lispyville-comment-or-uncomment beg end type))
 
+(defun lispyville--join-between-comments ()
+  "Insert the contents of the next line between the non-commented
+and commented regions of the current line.
+If both lines have inline comments, place them after another in their original order,
+and do not strip the comment characters."
+  (let ((inline-comment
+         (delete-and-extract-region
+          (save-excursion (forward-line 0)
+                          (comment-search-forward (point-at-eol) 'no-error))
+          (point-at-eol))))
+    (join-line 1)
+    (save-excursion
+      (when (re-search-forward
+             (concat "[[:blank:]]*" comment-start-skip)
+             (point-at-eol) 'no-error)
+        (goto-char (match-beginning 0)))
+      (insert " " inline-comment)))
+  (indent-according-to-mode))
+
+(evil-define-operator lispyville-join (beg end)
+  "Join the next line keeping inline comments out of the way.
+If region is active, join all selected lines into one and splice all comments to the end."
+  :motion evil-line
+  (let ((count (count-lines beg end)))
+    (when (> count 1)
+      (setq count (1- count)))
+    (goto-char beg)
+    (dotimes (_ count)
+      (if (save-excursion (end-of-line) (lispy--in-comment-p))
+          ;; Current line is a comment or ends in an inline comment
+          (cond
+           ;; Edge case: end of buffer, do nothing
+           ((= (point-at-eol) (point-max)) nil)
+           ;; Empty line or interior of multi-line comment - join normally
+           ((save-excursion
+              (forward-line 1)
+              (or (nth 4 (syntax-ppss))
+                  (looking-at-p "[[:space:]]*$")))
+            (join-line 1))
+           ;; Entire next line is also a comment - splice them together.
+           ((save-excursion
+              (forward-line 1)
+              (looking-at (concat "[[:space:]]*" comment-start-skip)))
+            (end-of-line)
+            (delete-region (point) (match-end 0))
+            (fixup-whitespace))
+           ;; Next line is non-empty and not a comment:
+           ;; splice it between current line and the inline comment
+           (t (lispyville--join-between-comments)))
+        ;; Normal case, no comments involved
+        (join-line 1)))))
+
 ;; ** Wrap Key Theme
 (evil-define-operator lispyville-wrap-with-round (beg end)
   "Insert ( at BEG and ) at END."
@@ -1912,7 +1964,8 @@ When THEME is not given, `lispville-key-theme' will be used instead."
            [remap evil-delete-backward-char]
            #'lispyville-delete-char-or-splice-backwards
            [remap evil-substitute] #'lispyville-substitute
-           [remap evil-change-whole-line] #'lispyville-change-whole-line))
+           [remap evil-change-whole-line] #'lispyville-change-whole-line
+           [remap evil-join] #'lispyville-join))
         (c-w
          ;; no states necessary for remaps
          ;; (setq states (or states '(insert emacs)))
