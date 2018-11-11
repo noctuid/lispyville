@@ -1985,7 +1985,7 @@ When THEME is not given, `lispville-key-theme' will be used instead."
          (or states (setq states 'normal))
          (lispyville--define-key states
            (kbd "M-(") #'lispyville-wrap-round
-           (kbd "M-[") #'lispyyville-wrap-brackets
+           (kbd "M-[") #'lispyville-wrap-brackets
            (kbd "M-{") #'lispyville-wrap-braces))
         (arrows
          (or states (setq states 'normal))
