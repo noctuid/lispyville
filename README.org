@@ -214,6 +214,22 @@ The corresponding symbol is =additional-motions= or =additional-movement=. The d
 
 There is also the unbound ~lispyville-beginning-of-next-defun~.
 
+** Commentary Key Theme
+The corresponding symbol is  =commentary=. The default state is normal state (inherited in visual state).
+The bindings follow vim/evil-commentary defaults as shown below:
+
+| key   | command                                |
+|-------+----------------------------------------|
+| =gc=  | ~lispyville-comment-or-uncomment~      |
+| =s-/= | ~lispyville-comment-or-uncomment-line~ |
+
+If you prefer evil-nerd-commenter style bindings, add the following to your configuration, where =,= is the evil leader key:
+#+begin_src emacs-lisp
+(evil-define-key 'motion lispyville-mode-map
+  ",,"  #'lispyville-comment-or-uncomment
+  ",ci" #'lispyville-comment-or-uncomment-line)
+#+end_src
+
 ** Slurp/Barf Key Themes
 Two key themes are provided for slurping and barfing keybindings. The default state for both is normal. Note that the commands in both key themes work with digit arguments. A positive argument will barf or slurp that many times like in cleverparens. Additionally, for the slurp commands, an argument of =-1= will slurp to the end of the line where the sexp after the closing paren ends, and an argument of =0= will slurp as far as possible. See the documentation for [[http://oremacs.com/lispy/#lispy-slurp][lispy-slurp]] for more information. Also see [[https://github.com/noctuid/lispyville#more-fluid-transitioning-between-normal-state-and-special][here]] for some extra information on automatically entering special after executing these commands.
 

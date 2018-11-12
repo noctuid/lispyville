@@ -60,6 +60,9 @@ lispyville has been loaded."
        :tag "Extra motions similar to those provided by cleverparens."
        additional-movement)
       (const
+       :tag "Safe version of `evil-commentary' for toggling comments."
+       commentary)
+      (const
        :tag "Slurp/barf keybindings in the style of cleverparens."
        slurp/barf-cp)
       (const
@@ -664,6 +667,25 @@ ARG has the same effect."
                     end))
       (lispy--normalize-1))
     (goto-char orig-pos)))
+
+(evil-define-operator lispyville-comment-or-uncomment (beg end type)
+  "Like `evil-commentary' or `evilnc-comment-operator' but handles unmatched delimiters.
+May insert newlines where necessary in order to move delimiters outside of the
+commented regions and preserve the balanced structure. "
+  :move-point nil
+  (interactive "<R>")
+  (let ((end-marker (copy-marker (1+ end)))
+        (comment-combine-change-calls nil)) ;; workaround for undo-tree corruption issue in Emacs 27
+    (dolist (r (lispy--find-safe-regions beg end))
+      (comment-or-uncomment-region (car r) (cdr r)))
+    (delete-trailing-whitespace beg end-marker)))
+
+(evil-define-operator lispyville-comment-or-uncomment-line (beg end type)
+  "Comment or uncomment lines while preserving structure."
+  :motion evil-line
+  :move-point nil
+  (interactive "<R>")
+  (lispyville-comment-or-uncomment beg end type))
 
 ;; ** Wrap Key Theme
 (evil-define-operator lispyville-wrap-with-round (beg end)
@@ -1946,6 +1968,11 @@ When THEME is not given, `lispville-key-theme' will be used instead."
            ;; like lispy-left and lispy-right
            "(" #'lispyville-backward-up-list
            ")" #'lispyville-up-list))
+        (commentary
+         (or states (setq states 'motion))
+         (lispyville--define-key states
+           "gc" #'lispyville-comment-or-uncomment
+           (kbd "s-/") #'lispyville-comment-or-uncomment-line))
         (slurp/barf-cp
          (or states (setq states 'normal))
          (lispyville--define-key states
