@@ -1,0 +1,26 @@
+* Testing
+If you make a PR, please add tests for all added functionality (including tests for known edge cases). In the future I will switch to using buttercup, but lispyville currently uses ERT for testing.
+
+** Running Tests
+To run tests from the command line, first run ~make cask~ and then run ~make test~. ~make cask~ will install dependencies and only needs to be run once for a given Emacs version or when dependencies need to be updated. A specific Emacs version can be used by specifying =EMACS= with the command (e.g. ~EMACS=emacs-25.3 make cask~ and ~EMACS=emacs-25.3 make test~).
+
+** Writing Tests
+For every command added, an ~ert-deftest~ with the same name should be added.The main helper function for writing tests is ~lispyville-with~. ~lispyville-with~ takes an initial string to populate a temporary buffer with. All following arguments after that are functions or keybindings to run in the buffer. It will return the result of running those in the buffer. =|= represents the point and =~= represents the mark.
+
+#+begin_src emacs-lisp
+(ert-deftest forward-word ()
+  ;; test that `forward-word' goes to the end of a word
+  (should (string= (lispyville-with "|foo bar"
+                     (forward-word))
+                   "foo| bar"))
+  ;; or if the command has a keybinding:
+  (should (string= (lispyville-with "|foo bar"
+                     "M-f")
+                   "foo| bar")))
+#+end_src
+
+Please include comments explaining the purpose of your test cases. You can eval your tests in the buffer while writing initially, but please make sure that they pass from ~make test~ as well.
+
+You can use the command ~lispy-stringify-oneline~ to convert a multi-line sexp or region into a single line suitable for use ~lispyville-with~.
+
+See the docstring of ~lispyville-with~ and =lispyville-test.el= for more information.
