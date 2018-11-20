@@ -64,6 +64,16 @@ character after it is not considered as part of the region."
   (yank)
   (goto-char (point-max)))
 
+(defmacro lispyville-should (body before after)
+  "Simple syntax transformation for readability.
+Body is an unquoted list of commands to run,
+or a string which is automatically wrapped in a list."
+  (declare (indent 1))
+  (when (stringp body)
+    (setq body (list body)))
+  `(should (string= (lispyville-with ,before ,@body)
+                    ,after)))
+
 ;;; Operators
 (ert-deftest lispyville-yank ()
   (should (string= (lispyville-with "(|a)"
