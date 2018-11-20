@@ -254,13 +254,33 @@ The bindings follow vim/evil-commentary defaults as shown below:
 | key   | command                                |
 |-------+----------------------------------------|
 | =gc=  | ~lispyville-comment-or-uncomment~      |
+| =gy=  | ~lispyville-comment-and-clone-dwim~    |
 | =s-/= | ~lispyville-comment-or-uncomment-line~ |
 
 If you prefer evil-nerd-commenter style bindings, add the following to your configuration, where =,= is the evil leader key:
 #+begin_src emacs-lisp
 (evil-define-key 'motion lispyville-mode-map
   ",,"  #'lispyville-comment-or-uncomment
+  ",."  #'lispyville-comment-and-clone-dwim
   ",ci" #'lispyville-comment-or-uncomment-line)
+#+end_src
+
+The safe comment-and-clone operator operates only on the rightmost balanced region by default. If the region is selected visually, it operates separately on all balanced subregions.
+#+begin_src emacs-lisp
+;; initial state (cursor on first line)
+(foo (bar) (baz|
+            (quux)))
+
+;; "gyy"
+(foo (bar) (;; baz
+            baz
+            (quux)))
+
+;; with visual line selection: "Vgy"
+(;; foo (bar)
+ foo (bar) (;; baz
+            baz
+            (quux)))
 #+end_src
 
 ** Slurp/Barf Key Themes

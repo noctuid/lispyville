@@ -687,6 +687,28 @@ commented regions and preserve the balanced structure. "
   (interactive "<R>")
   (lispyville-comment-or-uncomment beg end type))
 
+(evil-define-operator lispyville-comment-and-clone-dwim (beg end type)
+  "Insert commented out copies of the right-most balanced portion within the specified region.
+If the region is active (visual selection), apply to all subregions, not only the rightmost one."
+  :move-point nil
+  (interactive "<R>")
+  (save-excursion
+    (let ((end-marker (copy-marker (1+ end)))
+          (reg-active (region-active-p))
+          (comment-combine-change-calls nil)) ;; workaround for undo-tree corruption issue in Emacs 27
+      (when reg-active
+        (evil-normal-state))
+      (cl-loop
+       for (rb . re) in (lispy--find-safe-regions beg end) do
+       (let ((str (buffer-substring-no-properties rb re)))
+         (goto-char rb)
+         (insert str)
+         (when (> (length (string-trim str)) 0)
+           (comment-region rb (+ rb (length str)))
+           (unless reg-active
+             (cl-return)))))
+      (indent-region beg end-marker))))
+
 (defun lispyville--join-between-comments ()
   "Insert the contents of the next line between the non-commented
 and commented regions of the current line.
@@ -2025,6 +2047,7 @@ When THEME is not given, `lispville-key-theme' will be used instead."
          (or states (setq states 'motion))
          (lispyville--define-key states
            "gc" #'lispyville-comment-or-uncomment
+           "gy" #'lispyville-comment-and-clone-dwim
            (kbd "s-/") #'lispyville-comment-or-uncomment-line))
         (slurp/barf-cp
          (or states (setq states 'normal))
