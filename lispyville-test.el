@@ -8,6 +8,7 @@
                              slurp/barf-cp
                              additional
                              additional-insert
+                             commentary
                              mark-toggle))
 (lispyville-set-key-theme)
 
@@ -74,7 +75,7 @@ or a string which is automatically wrapped in a list."
   `(should (string= (lispyville-with ,before ,@body)
                     ,after)))
 
-;;; Operators
+;; * Operators
 (ert-deftest lispyville-yank ()
   (should (string= (lispyville-with "(|a)"
                      "yW"
@@ -425,7 +426,139 @@ or a string which is automatically wrapped in a list."
                      "=G")
                    "(foo\n |a)")))
 
-;;; Commands/Motions
+;; ** Comment/uncomment
+(ert-deftest lispyville-comment-or-uncomment ()
+  (lispyville-should ("gcc")
+    "|foo"
+    "|;; foo")
+  (lispyville-should ("gcc")
+    "|;; foo"
+    "|foo")
+  ;; text objects
+  (lispyville-should ("gciw")
+    "foo b|ar baz"
+    "foo ;; b|ar\nbaz")
+  ;; unbalanced opening parens
+  (lispyville-should ("gcc")
+    "|(foo\n bar baz)"
+    "|(;; foo\n bar baz)")
+  ;; unbalanced closing parens
+  (lispyville-should ("gcc")
+    "(foo\n bar |baz)"
+    "(foo\n ;; bar |baz\n )")
+  ;; maybe auto indent/stripping indentation should be built into the macro?
+  (lispyville-should ("gcc" (indent-rigidly (point-min) (point-max) -10))
+    "(foo (bar (baz|\n quux)))"
+    "(;; foo\n(;; bar\n(;; baz|\nquux)))")
+  ;; visual selection
+  (lispyville-should ("gc" (indent-rigidly (point-min) (point-max) -10))
+    "(foo (ba~r (baz\n qu|ux)))"
+    "(foo (ba|;; r\n(;; baz\n;; quu\nx)))")
+  ;; multiline comment syntax
+  (lispyville-should ((c-mode) (lispyville-mode) "gcc")
+    "/* |a\nb\nc*/ d"
+    "|a\nb\nc d"))
+
+(ert-deftest lispyville-comment-and-clone-dwim ()
+  ;; cursor stays on the uncommented region
+  (lispyville-should ("gyy")
+    "fo|o"
+    ";; foo\nfo|o")
+  ;; works with text objects
+  (lispyville-should ("gyiw")
+    "foo b|ar baz"
+    "foo ;; bar\nb|ar baz")
+  ;; only the rightmost balanced region
+  (lispyville-should ("gyy")
+    "(lorem (|ipsum (dolor
+               (sit)))
+       (amet))"
+    "(lorem (|ipsum (;; dolor
+               dolor
+               (sit)))
+       (amet))")
+  ;; unless visual selection is active
+  (lispyville-should ("gy")
+    "~(lorem (ipsum (dolor|
+               (sit)))
+       (amet))"
+    "|(;; lorem
+ lorem (;; ipsum
+        ipsum (;; dolor
+               dolor
+               (sit)))
+       (amet))")
+  (lispyville-should ("gy")
+    "(lorem (ipsum (~dolor
+               (sit)))
+       (amet))|"
+    "(lorem (ipsum (|;; dolor
+               ;; (sit)
+               dolor
+               (sit)))
+       ;; (amet)
+       (amet))"))
+
+;; ** Join
+(ert-deftest lispyville-join ()
+  ;; basic operation
+  (lispyville-should ("J")
+    "fo|o\n bar"
+    "foo| bar")
+  (lispyville-should ("J")
+    "|foo     \n   bar"
+    "foo| bar")
+  (lispyville-should ("J")
+    "(|foo \n     )"
+    "(foo|)")
+  ;; does nothing at eob
+  (lispyville-should ("J")
+    "|foo"
+    "foo|")
+  ;; repeats
+  (lispyville-should ("3J")
+    "(a|\n b\n c)"
+    "(a b| c)")
+  ;; splice comments together
+  (lispyville-should ("J")
+    ";; |foo\n;; bar"
+    ";; foo| bar")
+  (lispyville-should ("J")
+    ";; foo |  \n     ;    bar"
+    ";; foo| bar")
+  (lispyville-should ("J")
+    "a | ; b  \n;;  c"
+    "a  ; b| c")
+  ;; insert between inline comments
+  (lispyville-should ("J")
+    "|a ; b\nc"
+    "a| c ; b")
+  (lispyville-should ("J")
+    "a | ;; b\n c ; d"
+    "a| c ;; b ; d")
+
+  ;; multiline comment syntax - join normally
+  (lispyville-should ((c-mode) (lispyville-mode) "J")
+    "|/* foo\n   bar\n   baz */"
+    "/* foo| bar\n   baz */")
+  (lispyville-should ((c-mode) (lispyville-mode) "J")
+    "/* foo\n   b|ar */\nbaz"
+    "/* foo\n   bar */| baz")
+  (lispyville-should ((c-mode) (lispyville-mode) "J")
+    "|foo\n/* bar\n   baz */"
+    "foo| /* bar\n   baz */")
+  (lispyville-should ((c-mode) (lispyville-mode) "J")
+    "/* foo\n   bar| */\n// baz"
+    "/* foo\n   bar */| // baz")
+  ;; splicing a single line comment with following multiline comment is a little
+  ;; broken, but easy enough to fix manually
+  ;; (lispyville-should ((c-mode) (lispyville-mode) "J")
+  ;;   "// |foo\n/* bar\n   baz */"
+  ;;   "// foo| /* bar\n   baz */")
+  )
+
+
+;; * Commands/Motions
 (ert-deftest lispyville-first-non-blank ()
   (should (string= (lispyville-with "|   a"
                      (lispyville-first-non-blank))
