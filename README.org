@@ -259,7 +259,7 @@ The bindings follow vim/evil-commentary defaults as shown below:
 
 If you prefer evil-nerd-commenter style bindings, add the following to your configuration, where =,= is the evil leader key:
 #+begin_src emacs-lisp
-(evil-define-key 'motion lispyville-mode-map
+(evil-define-key 'normal lispyville-mode-map
   ",,"  #'lispyville-comment-or-uncomment
   ",."  #'lispyville-comment-and-clone-dwim
   ",ci" #'lispyville-comment-or-uncomment-line)

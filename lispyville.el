@@ -2044,7 +2044,7 @@ When THEME is not given, `lispville-key-theme' will be used instead."
            "(" #'lispyville-backward-up-list
            ")" #'lispyville-up-list))
         (commentary
-         (or states (setq states 'motion))
+         (or states (setq states 'normal))
          (lispyville--define-key states
            "gc" #'lispyville-comment-or-uncomment
            "gy" #'lispyville-comment-and-clone-dwim
