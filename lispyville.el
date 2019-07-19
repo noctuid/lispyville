@@ -1,6 +1,6 @@
 ;;; lispyville.el --- A minor mode for integrating evil with lispy. -*- lexical-binding: t -*-
 
-;; Author: Fox Kiester <noct@openmailbox.org>
+;; Author: Fox Kiester <noct@posteo.net>
 ;; URL: https://github.com/noctuid/lispyville
 ;; Created: March 03, 2016
 ;; Keywords: vim, evil, lispy, lisp, parentheses
