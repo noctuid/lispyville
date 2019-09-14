@@ -48,6 +48,17 @@ Lispyville can also be used without lispy:
 ;; ...
 #+end_src
 
+Here is an example configuration with =use-package= and =general= that adds
+additional keybindings.
+
+#+begin_src emacs-lisp
+(use-package lispyville
+  :init
+  (general-add-hook '(emacs-lisp-mode-hook lisp-mode-hook) #'lispyville-mode)
+  :config
+  (lispyville-set-key-theme '(operators c-w additional))
+#+end_src
+
 * Safe Operators
 The operators behave similarly to evil-cleverparens' operators with a few exceptions. The delete operator will always act safely by ignoring unmatched delimiters, whereas cleverparens will sometimes splice. While cleverparens' yank operators will attempt to add unmatched delimiters, lispyville's yank operators will simply exclude the unmatched delimiters, which is consistent with how the delete operator works. The operators will also work in visual block mode, unlike with cleverparens. The user can also choose whether or not they want to act safely on delimiters in strings and comments (see [[#lispy-settings][Lispy Settings]]).
 
