@@ -54,6 +54,9 @@ lispyville has been loaded."
        :tag "Safe version of `evil-delete-backward-word'."
        c-w)
       (const
+       :tag "Safe version of `evil-delete-back-to-indentation'."
+       c-u)
+      (const
        :tag "Alternative to `evil-indent' that acts like `lispy-tab'."
        prettify)
       (const
@@ -564,6 +567,22 @@ This will also act as `lispy-delete-backward' after delimiters."
                                (evil-backward-word-begin)
                                (point))
                              (line-beginning-position))
+                            (point)
+                            'exclusive))))
+
+(evil-define-command lispyville-delete-back-to-indentation ()
+  "Like `evil-delete-back-to-indentation' but will not delete unmatched delimiters.
+This will also act as `lispy-delete-backward' after delimiters."
+  (cond ((bolp)
+         (evil-delete-backward-char-and-join 1))
+        ((lispyville--after-delimiter-p)
+         (lispy-delete-backward 1))
+        (t
+         (lispyville-delete (if (<= (current-column) (current-indentation))
+                                (line-beginning-position)
+                              (save-excursion
+                                (evil-first-non-blank)
+                                (point)))
                             (point)
                             'exclusive))))
 
@@ -1994,6 +2013,10 @@ When THEME is not given, `lispville-key-theme' will be used instead."
          (lispyville--define-key states
            [remap evil-delete-backward-word]
            #'lispyville-delete-backward-word))
+        (c-u
+         (lispyville--define-key states
+           [remap evil-delete-back-to-indentation]
+           #'lispyville-delete-back-to-indentation))
         (prettify
          ;; no states necessary for remaps
          ;; (or states (setq states 'normal))

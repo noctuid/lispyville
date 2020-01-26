@@ -4,6 +4,7 @@
                              s-operators
                              prettify
                              c-w
+                             c-u
                              additional-movement
                              slurp/barf-cp
                              additional
@@ -363,6 +364,31 @@ or a string which is automatically wrapped in a list."
   (should (string= (lispyville-with "\"a\"|"
                      "i C-w")
                    "|")))
+
+(ert-deftest lispyville-delete-back-to-indentation ()
+  (custom-set-variables '(evil-want-C-u-delete t))
+  (should (string= (lispyville-with "(foo bar\n     foobar|)"
+                     "i C-u")
+                   "(foo bar\n     |)"))
+  (should (string= (lispyville-with "(foo bar\n     |)"
+                     "i C-u")
+                   "(foo bar\n|)"))
+  (should (string= (lispyville-with "(foo bar\n|)"
+                     "i C-u")
+                   "(foo bar|)"))
+  (should (string= (lispyville-with "(foo bar|)"
+                     "i C-u")
+                   "(|)"))
+  (should (string= (lispyville-with "(|a)"
+                     "i C-u")
+                   "|"))
+  (should (string= (lispyville-with "(a)|"
+                     "i C-u")
+                   "|"))
+  (should (string= (lispyville-with "\"a\"|"
+                     "i C-u")
+                   "|"))
+  (custom-set-variables '(evil-want-C-u-delete nil)))
 
 (ert-deftest lispyville-change ()
   ;; linewise; unlike dd, cc should not delete newlines
