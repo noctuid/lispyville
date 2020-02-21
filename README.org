@@ -325,7 +325,7 @@ The =slurp/barf-lispy= key theme provides commands that act the same as the defa
 For both =<= bindings, if =lispyville-barf-stay-with-closing= is non-nil and barfing would move the closing delimiter behind the point, the point will instead be put on the closing delimiter.
 
 ** Wrap Key Theme
-The corresponding symbol is =wrap=. The default state is normal state.
+The corresponding symbol is =wrap=. The default state is normal state. Note binding =M-[= in terminal is the same as binding the scroll wheel. If you use the terminal Emacs and use the scroll wheel, you should not use this key theme.
 
 | key   | command                         |
 |-------+---------------------------------|
