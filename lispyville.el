@@ -43,7 +43,6 @@ lispyville being loaded. Otherwise, `lispyville-set-key-theme' should be
 called afterwards with no arguments. The user can also not set this variable
 at all and simply use `lispyville-set-key-theme' with an argument after
 lispyville has been loaded."
-  :group 'lispyville
   :type
   '(repeat :tag "Key Themes"
      (choice
@@ -105,7 +104,6 @@ before a closing one."
 Specifically, this applies for `lispyville-barf' and `lispyville-<'
 when barfing would move the delimiter behind the point. This option
 only has an effect if `lispyville-commands-put-into-special' is nil."
-  :group 'lispyville
   :type 'boolean)
 
 (defvaralias 'lispyville-preferred-state 'lispyville-preferred-lispy-state)
@@ -114,7 +112,6 @@ only has an effect if `lispyville-commands-put-into-special' is nil."
   "The preferred evil state for insertion and using lispy.
 This is used by any command that should enter special to determine the correct
 state."
-  :group 'lispyville
   :type '(choice
           (const :tag "Use insert state to get into special." insert)
           (const :tag "Use emacs state to get into special." emacs)))
@@ -123,12 +120,10 @@ state."
   "Applicable motions will enter insert or emacs state.
 This will only happen when they are not called with an operator or in visual
 mode."
-  :group 'lispyville
   :type 'boolean)
 
 (defcustom lispyville-commands-put-into-special nil
   "Applicable commands will enter insert or emacs state."
-  :group 'lispyville
   :type 'boolean)
 
 (defcustom lispyville-no-alter-lispy-options nil
@@ -137,18 +132,24 @@ By default, lispyville will set `lispy-safe-delte', `lispy-safe-copy',
 `lispy-safe-delete', and `lispy-safe-actions-no-pull-delimiters-into-comments'
 to t. To prevent lispyville from changing any lispy options, set this variable
 to a non-nil value."
-  :group 'lispyville
   :type 'boolean)
 
 (defcustom lispyville-insert-states '(insert emacs hybrid iedit-insert)
   "Insertion states that lispy special can be used from."
-  :group 'lispyville
   :type 'list)
+
+(defcustom lispyville-want-change-atom-to-end 'evil-want-change-word-to-end
+  "Whether `lispyville-forward-atom-begin' should change to the end of atoms.
+`evil-want-change-word-to-end' means use the value of
+`evil-want-change-word-to-end'. "
+  :type '(choice
+          boolean
+          (const :tag "Use evil-want-change-word-to-end"
+            evil-want-change-word-to-end)))
 
 (defface lispyville-special-face
   '((t :foreground "#aa4456"))
-  "Face for lispyville special mode line indicator."
-  :group 'lispyville)
+  "Face for lispyville special mode line indicator.")
 
 (with-eval-after-load 'evil-surround
   (add-to-list 'evil-surround-operator-alist '(lispyville-change . change))
@@ -943,19 +944,24 @@ on outlines. Unlike `up-list', it will keep the point on the closing delimiter."
 
 (evil-define-motion lispyville-forward-atom-begin (count)
   "Go to the next atom or comment beginning COUNT times."
-  (or count (setq count 1))
-  (if (< count 0)
-      (lispyville-backward-atom-begin (- count))
-    (cl-dotimes (_ count)
-      (let ((orig-pos (point)))
-        ;; move past the current atom
-        (ignore-errors (end-of-thing 'lispyville-atom))
-        ;; move to next atom
-        (forward-symbol 1)
-        (unless (and (ignore-errors (beginning-of-thing 'lispyville-atom))
-                     (not (<= (point) orig-pos)))
-          (goto-char orig-pos)
-          (cl-return))))))
+  (if (and (if (eq lispyville-want-change-atom-to-end 'evil-want-change-word-to-end)
+               evil-want-change-word-to-end
+             lispyville-want-change-atom-to-end)
+           (memq evil-this-operator evil-change-commands))
+      (lispyville-forward-atom-end count)
+    (or count (setq count 1))
+    (if (< count 0)
+        (lispyville-backward-atom-begin (- count))
+      (cl-dotimes (_ count)
+        (let ((orig-pos (point)))
+          ;; move past the current atom
+          (ignore-errors (end-of-thing 'lispyville-atom))
+          ;; move to next atom
+          (forward-symbol 1)
+          (unless (and (ignore-errors (beginning-of-thing 'lispyville-atom))
+                       (not (<= (point) orig-pos)))
+            (goto-char orig-pos)
+            (cl-return)))))))
 
 (evil-define-motion lispyville-backward-atom-begin (count)
   "Go to the previous atom or comment beginning COUNT times. "

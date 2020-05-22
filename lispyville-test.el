@@ -815,6 +815,29 @@ or a string which is automatically wrapped in a list."
                        ")")
                      "(((a b c)))|"))))
 
+(ert-deftest lispyville-forward-atom-begin ()
+  (lispyville-set-key-theme '(atom-movement))
+  (should (string= (lispyville-with "(|foo-bar baz-qux)"
+                     "w")
+                   "(foo-bar |baz-qux)"))
+  (should (string= (lispyville-with "(|foo-bar baz-qux)"
+                     "cw")
+                   "(| baz-qux)"))
+  (let ((lispyville-want-change-atom-to-end t)
+        evil-want-change-word-to-end)
+    (should (string= (lispyville-with "(|foo-bar baz-qux)"
+                       "cw")
+                     "(| baz-qux)")))
+  (let (evil-want-change-word-to-end)
+    (should (string= (lispyville-with "(|foo-bar baz-qux)"
+                       "cw")
+                     "(|baz-qux)")))
+  (let (lispyville-want-change-atom-to-end)
+    (should (string= (lispyville-with "(|foo-bar baz-qux)"
+                       "cw")
+                     "(|baz-qux)")))
+  (lispyville-set-key-theme))
+
 (ert-deftest lispyville-> ()
   (should (string= (lispyville-with "((a|) (b c))"
                      ">")
