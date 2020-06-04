@@ -8,4 +8,6 @@
 (development
  (depends-on "evil")
  (depends-on "lispy")
- (depends-on "cl-lib"))
+ (depends-on "cl-lib")
+ (depends-on "undercover")
+ (depends-on "buttercup"))

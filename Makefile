@@ -1,17 +1,24 @@
-emacs ?= emacs
-CASK ?= cask
-BEMACS = $(emacs) -batch -l elpa/elpa.el
-LOAD = -l lispyville.el
+EMACS ?= emacs
+SANDBOX_DIR ?= ./sandbox
 
-cask:
-	$(shell EMACS=$(emacs) $(CASK) --verbose --debug)
-	$(CASK) update
+.PHONY: deps
+deps:
+	@mkdir -p "$(SANDBOX_DIR)"
+	./with-gnu-utils/with-gnu-utils \
+		./makem/makem.sh -vv --sandbox="$(SANDBOX_DIR)" \
+			--install-deps --install-linters
 
+.PHONY: test
 test:
-	@echo "Using $(shell which $(emacs))..."
-	$(BEMACS) -l lispyville-test.el $(LOAD) -f ert-run-tests-batch-and-exit
+	@echo "Using $(shell which $(EMACS))..."
+	./with-gnu-utils/with-gnu-utils \
+		./makem/makem.sh -vv -d --sandbox="$(SANDBOX_DIR)" test
 
+.PHONY: lint
+lint:
+	./with-gnu-utils/with-gnu-utils \
+		./makem/makem.sh -vv --sandbox="$(SANDBOX_DIR)" lint
+
+.PHONY: clean
 clean:
-	rm -f *.elc
-
-.PHONY: cask test clean
+	rm -f -- *.elc **/*.elc *-autoloads.el **/*-autoloads.el *\~ **/*\~

@@ -1,0 +1,64 @@
+name: test
+
+on:
+  pull_request:
+    paths:
+      - '**.el'
+      - '**test.yml'
+  push:
+    paths:
+      - '**.el'
+      - '**test.yml'
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        # TODO some dependency requires 26.1?
+        emacs_version: [26.3]
+        # include:
+        #   - emacs_version: snapshot
+        #     allow-failure: true
+    steps:
+    - uses: purcell/setup-emacs@master
+      with:
+        version: ${{ matrix.emacs_version }}
+
+    - uses: actions/checkout@v2
+
+    - name: Checkout submodules
+      shell: bash
+      run: |
+        auth_header=$(git config --local \
+                          --get http.https://github.com/.extraheader)
+        git submodule sync --recursive
+        git -c "http.extraheader=$auth_header" \
+            -c protocol.version=2 submodule update --init --force \
+            --recursive --depth=1
+
+    - name: Install dependencies through brew
+      if: contains(matrix.os, 'macos')
+      # not all of these are actually used, but this takes care of all commands with-gnu-utils supports
+      run: |
+        brew install bash coreutils gawk findutils grep gnu-sed gnu-tar \
+             gnu-getopt
+
+    - name: Initialize sandbox
+      run: make deps
+
+    # - name: Lint
+    #   run: make lint
+
+    - name: Test
+      env:
+        UNDERCOVER_FORCE: do-coverage
+      run: make test
+      continue-on-error: ${{ matrix.allow_failure == 'true' }}
+
+    - uses: codecov/codecov-action@v1
+      with:
+        # set in repo settings
+        token: ${{ secrets.CODECOV_TOKEN }}
