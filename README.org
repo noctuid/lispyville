@@ -1,3 +1,14 @@
+#+TITLE: Lispyville User Manual
+#+AUTHOR: Fox Kiester
+#+LANGUAGE: en
+#+TEXINFO_DIR_CATEGORY: Emacs
+#+TEXINFO_DIR_TITLE: Lispyville: (lispyville).
+#+TEXINFO_DIR_DESC: Evil+lispy
+
+[[https://melpa.org/#/lispyville][file:https://melpa.org/packages/lispyville-badge.svg]]
+[[https://github.com/noctuid/lispyville/actions?query=workflow%3Atest][https://github.com/noctuid/lispyville/workflows/test/badge.svg]]
+[[https://codecov.io/gh/noctuid/lispyville][https://codecov.io/gh/noctuid/lispyville/branch/master/graph/badge.svg]]
+
 * Recent Changes
 ** 2018-01-20: =s-operators= key theme has been removed
 The =operators= key theme now remaps commands instead of directly binding keys, so there is no longer a need for a separate =s-operators= key theme.
