@@ -1624,7 +1624,7 @@ foo"
         "(a |baz~ c) d"
         "(a |baz~ c) d"
       "v"))
-  (it "should enter `lispyvilel-preferred-lispy-state'"
+  (it "should enter `lispyville-preferred-lispy-state'"
     (let ((lispyville-preferred-lispy-state 'emacs))
       (lispyville-expect-equal
           "~(a b c|) d"

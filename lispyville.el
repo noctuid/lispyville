@@ -1988,7 +1988,7 @@ If UNDO is non-nil, remove"
 ;;;###autoload
 (defun lispyville-set-key-theme (&optional theme)
   "Binds keys in lispyville-mode-map according to THEME.
-When THEME is not given, `lispville-key-theme' will be used instead."
+When THEME is not given, `lispyville-key-theme' will be used instead."
   (or theme (setq theme lispyville-key-theme))
   (dolist (item theme)
     (let ((type (if (listp item)
