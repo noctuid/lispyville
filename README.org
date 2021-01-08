@@ -67,7 +67,7 @@ additional keybindings.
   :init
   (general-add-hook '(emacs-lisp-mode-hook lisp-mode-hook) #'lispyville-mode)
   :config
-  (lispyville-set-key-theme '(operators c-w additional))
+  (lispyville-set-key-theme '(operators c-w additional)))
 #+end_src
 
 * Safe Operators
