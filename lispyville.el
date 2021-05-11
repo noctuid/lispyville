@@ -822,6 +822,10 @@ This won't jump to the beginning of the buffer if there is no paren there."
 (evil-define-motion lispyville-end-of-defun (count)
   "This is the evil motion equivalent of `end-of-defun'.
 This won't jump to the end of the buffer if there is no paren there."
+  (when (<= (- (line-end-position)
+              (point))
+           1)
+    (forward-line))
   (end-of-defun (or count 1))
   (re-search-backward lispy-right nil t)
   (lispyville--maybe-enter-special))

@@ -813,7 +813,12 @@ foo"
     (lispyville-expect-equal
         "(a |b c)"
         "|(a b c)"
-      "M-h")))
+      "M-h"))
+  (it "should act go past defun if called repeatedly"
+    (lispyville-expect-equal
+        "(a b c)(a |b c)"
+        "|(a b c)(a b c)"
+      "M-h M-h")))
 
 (describe "lispyville-end-of-defun"
   (it "should act as `end-of-defun'"
@@ -821,6 +826,11 @@ foo"
         "(a |b c)"
         "(a b c|)"
       "M-l"))
+  (it "should act go past defun if called repeatedly"
+    (lispyville-expect-equal
+        "(a |b c)(a b c)"
+        "(a b c)(a b c|)"
+      "M-l M-l"))
   (it "should go to after the closing delimiter when \
 `lispyville-motions-put-into-special' is non-nil"
     (let ((lispyville-motions-put-into-special t))
