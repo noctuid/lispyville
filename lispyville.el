@@ -1120,13 +1120,13 @@ strings and comments."
 (evil-define-text-object lispyville-inner-list (count &optional beg end type)
   "Select inner list."
   (let ((range
-         (evil-select-inner-object 'lispyville-list beg end type count)))
+         (evil-select-inner-unrestricted-object 'lispyville-list beg end type count)))
     (when range
       (lispyville--shrink-list range))))
 
 (evil-define-text-object lispyville-a-list (count &optional beg end type)
   "Select a list."
-  (evil-select-inner-object 'lispyville-list beg end type count))
+  (evil-select-inner-unrestricted-object 'lispyville-list beg end type count))
 
 ;; ** Sexp (nestable, custom inner)
 ;; TODO implement as a composite text object
@@ -1269,13 +1269,13 @@ Delete any nils from POSITIONS first."
 (evil-define-text-object lispyville-inner-sexp (count &optional beg end type)
   "Select inner sexp."
   (let ((range
-         (evil-select-inner-object 'lispyville-sexp beg end type count)))
+         (evil-select-inner-unrestricted-object 'lispyville-sexp beg end type count)))
     (when range
       (lispyville--shrink-sexp range))))
 
 (evil-define-text-object lispyville-a-sexp (count &optional beg end type)
   "Select a sexp."
-  (evil-select-inner-object 'lispyville-sexp beg end type count))
+  (evil-select-inner-unrestricted-object 'lispyville-sexp beg end type count))
 
 ;; ** Function/Top-level Form (non-nestable)
 (put 'lispyville-function 'targets-no-extend t)
@@ -1357,13 +1357,13 @@ Delete any nils from POSITIONS first."
   (count &optional beg end type)
   "Select inner function."
   (let ((range
-         (evil-select-inner-object 'lispyville-function beg end type count)))
+         (evil-select-inner-unrestricted-object 'lispyville-function beg end type count)))
     (when range
       (lispyville--shrink-list range))))
 
 (evil-define-text-object lispyville-a-function (count &optional beg end type)
   "Select a function."
-  (evil-select-inner-object 'lispyville-function beg end type count))
+  (evil-select-inner-unrestricted-object 'lispyville-function beg end type count))
 
 ;; ** Comment (non-nestable)
 (put 'lispyville-comment 'targets-no-extend t)
@@ -1565,13 +1565,13 @@ Delete any nils from POSITIONS first."
 (evil-define-text-object lispyville-inner-string (count &optional beg end type)
   "Select inner string."
   (let ((range
-         (evil-select-inner-object 'lispyville-string beg end type count)))
+         (evil-select-inner-unrestricted-object 'lispyville-string beg end type count)))
     (when range
       (lispyville--shrink-string range))))
 
 (evil-define-text-object lispyville-a-string (count &optional beg end type)
   "Select a string."
-  (evil-select-inner-object 'lispyville-string beg end type count))
+  (evil-select-inner-unrestricted-object 'lispyville-string beg end type count))
 
 ;; * Commands
 ;; TODO make motion
